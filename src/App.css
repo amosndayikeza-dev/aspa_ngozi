@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* =========================================
+   1. CONFIGURATION DU THÈME (Tailwind v4)
+   ========================================= */
+@theme {
+  /* --- Couleurs Principales (Palette Emerald Pro) --- */
+  
+  /* Primaire : Teal profond (Sidebar, boutons principaux) */
+  --color-brand-dark: #0F766E;       
+  
+  /* Accent : Teal vif (Hover, éléments actifs) */
+  --color-brand-medium: #14B8A6;     
+  
+  /* Fond secondaire : Menthe clair (Badges, avatars, fonds doux) */
+  --color-brand-light: #CCFBF1;      
+  
+  /* Fond principal : Gris bleuté très clair (Fond du Dashboard) */
+  --color-brand-bg: #F8FAFC;         
+
+  /* --- Textes --- */
+  /* Texte principal : Bleu-gris très foncé (Pour une lisibilité parfaite) */
+  --color-text-main: #0F172A;        
+  /* Texte secondaire : Gris moyen (Sous-titres) */
+  --color-text-muted: #64748B;       
+
+  /* --- Couleurs Systèmes (Alertes, Erreurs) --- */
+  --color-vet-danger: #EF4444;       /* Rouge pour les alertes/erreurs */
+  --color-vet-gold: #F59E0B;         /* Orange pour les avertissements */
+  --color-vet-success: #10B981;      /* Vert succès */
+
+  /* --- Typographie --- */
+  --font-sans: 'Inter Variable', system-ui, sans-serif;
+  --font-display: 'Inter Variable', system-ui, sans-serif;
+}
+
+/* =========================================
+   2. STYLES GLOBAUX (Reset & Anti-Scroll)
+   ========================================= */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; 
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-main);
+  background-color: var(--color-brand-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* =========================================
+   3. UTILITAIRES PERSONNALISÉS (Custom Utilities)
+   ========================================= */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  
+  scrollbar-width: none;  
+}
