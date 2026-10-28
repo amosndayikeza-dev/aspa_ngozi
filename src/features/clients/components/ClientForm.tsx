@@ -1,20 +1,30 @@
 // src/features/clients/components/ClientForm.tsx
 import { useState, type FormEvent } from 'react';
 import { User, Phone, Mail, MapPin, CheckCircle2 } from 'lucide-react';
-import { cn } from '@/shared/lib/cn';
 
 interface ClientFormProps {
+  initialData?: {
+    nom: string;
+    prenom: string;
+    telephone: string;
+    email: string;
+    adresse: string;
+  };
+
   onSubmit: (data: any) => Promise<void>;
   onCancel: () => void;
 }
 
-export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
+const fieldClass =
+  'w-full h-9 pl-9 pr-3 bg-gray-50 border border-gray-100 rounded-xl text-sm text-text-main placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark transition-colors';
+
+export function ClientForm({initialData, onSubmit, onCancel }: ClientFormProps) {
   const [formData, setFormData] = useState({
-    nom: '',
-    prenom: '',
-    telephone: '',
-    email: '',
-    adresse: '',
+    nom: initialData?.nom || '',
+    prenom: initialData?.prenom || '',
+    telephone: initialData?.telephone || '',
+    email: initialData?.email || '',
+    adresse: initialData?.adresse || '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,11 +49,11 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
       {/* Ligne 1 : Nom & Prénom */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label htmlFor="nom" className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+          <label htmlFor="nom" className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Nom
           </label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
             <input
               id="nom"
               name="nom"
@@ -52,16 +62,16 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
               value={formData.nom}
               onChange={handleChange}
               placeholder="Rakoto"
-              className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-text-main placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark transition-all"
+              className={fieldClass}
             />
           </div>
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="prenom" className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+          <label htmlFor="prenom" className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Prénom
           </label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
             <input
               id="prenom"
               name="prenom"
@@ -70,7 +80,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
               value={formData.prenom}
               onChange={handleChange}
               placeholder="Jean"
-              className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-text-main placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark transition-all"
+              className={fieldClass}
             />
           </div>
         </div>
@@ -79,11 +89,11 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
       {/* Ligne 2 : Téléphone & Email */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label htmlFor="telephone" className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+          <label htmlFor="telephone" className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Téléphone
           </label>
           <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
             <input
               id="telephone"
               name="telephone"
@@ -92,16 +102,16 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
               value={formData.telephone}
               onChange={handleChange}
               placeholder="034 12 345 67"
-              className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-text-main placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark transition-all"
+              className={fieldClass}
             />
           </div>
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+          <label htmlFor="email" className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Email
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
             <input
               id="email"
               name="email"
@@ -110,7 +120,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
               value={formData.email}
               onChange={handleChange}
               placeholder="jean@email.mg"
-              className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-text-main placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark transition-all"
+              className={fieldClass}
             />
           </div>
         </div>
@@ -118,11 +128,11 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
 
       {/* Ligne 3 : Adresse */}
       <div className="space-y-1.5">
-        <label htmlFor="adresse" className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+        <label htmlFor="adresse" className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           Adresse
         </label>
         <div className="relative">
-          <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
           <input
             id="adresse"
             name="adresse"
@@ -131,17 +141,17 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
             value={formData.adresse}
             onChange={handleChange}
             placeholder="Lot II A 45, Antananarivo"
-            className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-text-main placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark transition-all"
+            className={fieldClass}
           />
         </div>
       </div>
 
       {/* BOUTONS D'ACTION */}
-      <div className="pt-4 flex justify-end gap-3">
+      <div className="pt-2 flex justify-end gap-2">
         <button
           type="button"
           onClick={onCancel}
-          className="h-9 px-4 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+          className="h-9 px-4 rounded-xl text-xs font-semibold text-text-muted bg-gray-50 hover:text-text-main hover:bg-brand-light/30 transition-colors"
         >
           Annuler
         </button>
@@ -152,7 +162,7 @@ export function ClientForm({ onSubmit, onCancel }: ClientFormProps) {
         >
           {isSubmitting ? 'Enregistrement...' : (
             <>
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle2 className="w-3.5 h-3.5" />
               Enregistrer le client
             </>
           )}

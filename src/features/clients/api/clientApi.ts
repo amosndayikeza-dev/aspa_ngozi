@@ -1,5 +1,6 @@
 import { resolve } from "node:dns";
-import type { Client } from "../types";
+import type { Animal, Client } from "../types";
+import { data } from "react-router-dom";
 
 /**
  * Base de donnee fictive (mock)
@@ -79,6 +80,31 @@ export const clientApi = {
             reject(new Error("Client introuvable"));
             }
         }, 400);
+        });
+    },
+
+    /**
+     * modification du client
+     */
+
+    updateClient: async (id: string, data: Partial<Client>): Promise<Client> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Dans une vraie API, le backend ferait la mise à jour en base.
+        // Ici, on renvoie juste les données fusionnées.
+        resolve({ id, ...data } as Client); 
+      }, 500);
+    });
+    },
+    
+    /**
+     *  mise a jour de l'animal
+     */
+    updateAnimal: async (clientId: string, animalId: string, data: Partial<Animal>): Promise<Animal> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+            resolve({ id: animalId, ...data } as Animal);
+            }, 500);
         });
     }
 };

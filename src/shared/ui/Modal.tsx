@@ -61,21 +61,21 @@ export function Modal({
       {/* CONTENEUR DE LA MODALE */}
       <div 
         className={cn(
-          "relative w-full bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200",
+          "relative w-full bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden animate-in zoom-in-95 duration-200",
           maxWidthClasses[maxWidth]
         )}
       >
         {/* EN-TÊTE */}
-        <div className="flex items-start justify-between p-5 border-b border-gray-100">
+        <div className="flex items-start justify-between gap-4 p-5 border-b border-gray-100">
           <div>
-            <h2 className="text-base font-bold text-text-main">{title}</h2>
+            <h2 className="text-sm font-semibold text-text-main">{title}</h2>
             {description && (
               <p className="text-xs text-text-muted mt-1">{description}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-vet-danger hover:bg-red-50 rounded-lg transition-colors"
+            className="p-1.5 text-text-muted hover:text-text-main hover:bg-gray-50 rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -88,7 +88,7 @@ export function Modal({
 
         {/* PIED (Boutons d'action) */}
         {footer && (
-          <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
+          <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-2">
             {footer}
           </div>
         )}

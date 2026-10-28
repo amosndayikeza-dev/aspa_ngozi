@@ -37,10 +37,10 @@ export function DataTable<T>({
     //1. etat de chargement (skeleton)
     if (isLoading) {
         return (
-            <div className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-4 animate-pulse">
-                <div className="h-8 bg-gray-100 rounded-md mb-4 w-1/4"></div>
+            <div className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 animate-pulse">
+                <div className="h-3 bg-gray-100 rounded-md mb-4 w-1/5"></div>
                 {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="h-12 bg-gray-50 rounded-lg mb-2"></div>
+                    <div key={i} className="h-10 bg-gray-50 rounded-lg mb-2 last:mb-0"></div>
                 ))}
             </div>
         );
@@ -49,9 +49,9 @@ export function DataTable<T>({
     //2. Etat vide (aucon resultat)
     if (data.length === 0) {
         return (
-            <div className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-12 fllex flex-col items-center justify-center text-center">
-                <p className="text-sm font-semibold text-gray-600">Aucun resultat trouve</p>
-                <p className="text-xs text-gray-400 mt-1">Essayer de modifier vos criteres de recherche.</p>
+            <div className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-12 flex flex-col items-center justify-center text-center">
+                <p className="text-sm font-semibold text-text-main">Aucun resultat trouve</p>
+                <p className="text-xs text-text-muted mt-1">Essayer de modifier vos criteres de recherche.</p>
             </div>
         );
     }
@@ -63,12 +63,12 @@ export function DataTable<T>({
                 <table className="w-full text-left border-collapse">
                     {/** en tete du tableau */}
                     <thead>
-                        <tr className="bg-gray-50/50 border-b border-gray-100">
+                        <tr className="bg-gray-50 border-b border-gray-100">
                             {Columns.map((col, index) => (
                                 <th
                                     key={index}
                                     className={cn(
-                                        "px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider",
+                                        "px-4 py-2.5 text-xs font-semibold text-text-muted uppercase tracking-wider",
                                         col.className
                                     )}
                                 >
@@ -86,7 +86,7 @@ export function DataTable<T>({
                                 key={keyExtractor(item)}
                                 onClick={() => onRowClick?.(item)}
                                 className={cn(
-                                    "hover:bg-brand-bg/50 transition-colors",
+                                    "hover:bg-gray-50 transition-colors",
                                     onRowClick ? "cursor-pointer" : ""
                                 )}
                             >
