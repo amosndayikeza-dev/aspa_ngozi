@@ -11,9 +11,17 @@ interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  variant?: 'drawer' | 'dialog';
 }
 
-const maxWidthClasses = {
+const maxWidthDrawerClasses = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-lg',
+  xl: 'max-w-xl',
+};
+
+const maxWidthDialogClasses = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-lg',
@@ -28,8 +36,12 @@ export function Modal({
   children,
   footer,
   maxWidth = 'md',
+  variant,
 }: ModalProps) {
-  
+  // Par défaut, les modales sm (confirmations) sont centrées en Glassmorphism,
+  // tandis que md, lg, xl sont des Side-Drawers coulissants depuis la droite.
+  const isDrawer = variant ? variant === 'drawer' : maxWidth !== 'sm';
+
   // Fermer la modale avec la touche "Escape"
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -37,7 +49,6 @@ export function Modal({
     };
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
-      // Empêche le scroll du body quand la modale est ouverte
       document.body.style.overflow = 'hidden';
     }
     return () => {
@@ -48,47 +59,88 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  return (
-    /* 
-      L'OVERLAY : Fond noir à 40% + flou intense (backdrop-blur-md) 
-      pour un effet "Glassmorphism" très moderne.
-    */
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-      
-      {/* CLIC À L'EXTÉRIEUR POUR FERMER */}
+  return isDrawer ? (
+    /* --- PANNEAU LATÉRAL COULISSANT (SIDE-DRAWER) --- */
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/45 backdrop-blur-xs animate-in fade-in duration-200">
+      {/* Clic à l'extérieur pour fermer */}
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 
-      {/* CONTENEUR DE LA MODALE */}
+      {/* Conteneur du tiroir latéral */}
       <div 
         className={cn(
-          "relative w-full bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden animate-in zoom-in-95 duration-200",
-          maxWidthClasses[maxWidth]
+          "relative h-full w-full bg-white border-l border-slate-200/90 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300 ease-out z-10",
+          maxWidthDrawerClasses[maxWidth]
         )}
       >
-        {/* EN-TÊTE */}
-        <div className="flex items-start justify-between gap-4 p-5 border-b border-gray-100">
-          <div>
-            <h2 className="text-sm font-semibold text-text-main">{title}</h2>
-            {description && (
-              <p className="text-xs text-text-muted mt-1">{description}</p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-text-muted hover:text-text-main hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Ligne d'accent lumineuse supérieure */}
+        <div className="h-0.5 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-transparent shrink-0" />
 
-        {/* CONTENU (Scrollable si trop grand) */}
-        <div className="p-5 overflow-y-auto max-h-[70vh] no-scrollbar">
+        {/* En-tête */}
+        {title && (
+          <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0 bg-slate-50/60">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 tracking-tight">{title}</h2>
+              {description && (
+                <p className="text-[11px] text-slate-500 mt-0.5">{description}</p>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              title="Fermer (Échap)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Corps scrollable */}
+        <div className="flex-1 p-5 overflow-y-auto no-scrollbar">
           {children}
         </div>
 
-        {/* PIED (Boutons d'action) */}
+        {/* Pied avec boutons d'action */}
         {footer && (
-          <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-2">
+          <div className="p-3.5 px-5 border-t border-slate-100 bg-slate-50/80 flex justify-end gap-2 shrink-0">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  ) : (
+    /* --- MODALE CENTRÉE EN GLASSMORPHISM --- */
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/45 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
+
+      <div 
+        className={cn(
+          "relative w-full bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 z-10",
+          maxWidthDialogClasses[maxWidth]
+        )}
+      >
+        {title && (
+          <div className="flex items-start justify-between gap-3 p-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">{title}</h2>
+              {description && (
+                <p className="text-[11px] text-slate-500 mt-0.5">{description}</p>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        <div className="p-5 overflow-y-auto max-h-[85vh] no-scrollbar">
+          {children}
+        </div>
+
+        {footer && (
+          <div className="p-3.5 px-5 border-t border-slate-100 bg-slate-50/80 flex justify-end gap-2">
             {footer}
           </div>
         )}

@@ -8,6 +8,8 @@
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
     "module": "esnext",
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "ignoreDeprecations": "6.0"
   }
 }

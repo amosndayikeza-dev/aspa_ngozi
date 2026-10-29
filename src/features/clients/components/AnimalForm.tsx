@@ -41,29 +41,29 @@ export function AnimalForm({ initialData, onSubmit, onCancel }: AnimalFormProps)
   };
 
   return (
-    <form id="animal-form" onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label htmlFor="nom" className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+    <form id="animal-form" onSubmit={handleSubmit} className="space-y-3.5 select-none">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label htmlFor="nom" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
             Nom de l'animal
           </label>
           <div className="relative">
-            <PawPrint className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <PawPrint className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
             <input
               id="nom" name="nom" type="text" required
               value={formData.nom} onChange={handleChange} placeholder="Ex: Rex"
-              className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark"
+              className="w-full h-8 pl-8 pr-3 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all"
             />
           </div>
         </div>
         
-        <div className="space-y-1.5">
-          <label htmlFor="espece" className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+        <div className="space-y-1">
+          <label htmlFor="espece" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
             Espèce
           </label>
           <select
             id="espece" name="espece" value={formData.espece} onChange={handleChange}
-            className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark"
+            className="w-full h-8 px-2.5 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all cursor-pointer"
           >
             <option value="Chien">Chien</option>
             <option value="Chat">Chat</option>
@@ -76,50 +76,58 @@ export function AnimalForm({ initialData, onSubmit, onCancel }: AnimalFormProps)
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label htmlFor="race" className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Race</label>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label htmlFor="race" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Race</label>
           <input
             id="race" name="race" type="text" required
             value={formData.race} onChange={handleChange} placeholder="Ex: Golden Retriever"
-            className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark"
+            className="w-full h-8 px-2.5 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all"
           />
         </div>
         
-        <div className="space-y-1.5">
-          <label htmlFor="dateNaissance" className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Date de naissance</label>
+        <div className="space-y-1">
+          <label htmlFor="dateNaissance" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Date de naissance</label>
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
             <input
               id="dateNaissance" name="dateNaissance" type="date" required
               value={formData.dateNaissance} onChange={handleChange}
-              className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark"
+              className="w-full h-8 pl-8 pr-2.5 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all"
             />
           </div>
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <label htmlFor="poidsKg" className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Poids (kg) - Optionnel</label>
+      <div className="space-y-1">
+        <label htmlFor="poidsKg" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Poids (kg) - Optionnel</label>
         <div className="relative">
-          <Weight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Weight className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
           <input
             id="poidsKg" name="poidsKg" type="number" step="0.1"
             value={formData.poidsKg} onChange={handleChange} placeholder="Ex: 12.5"
-            className="w-full h-10 pl-9 pr-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark"
+            className="w-full h-8 pl-8 pr-3 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all"
           />
         </div>
       </div>
 
-      <div className="pt-4 flex justify-end gap-3">
-        <button type="button" onClick={onCancel} className="h-9 px-4 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors">
+      <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+        <button 
+          type="button" 
+          onClick={onCancel} 
+          className="h-8 px-3.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200/60 border border-slate-200/60 transition-colors cursor-pointer"
+        >
           Annuler
         </button>
-        <button type="submit" disabled={isSubmitting} className="h-9 px-4 bg-brand-dark hover:bg-brand-medium text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50">
+        <button 
+          type="submit" 
+          disabled={isSubmitting} 
+          className="h-8 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs border border-emerald-600 disabled:opacity-50 cursor-pointer"
+        >
           {isSubmitting ? 'Enregistrement...' : (
             <>
-              <CheckCircle2 className="w-4 h-4" />
-              {initialData ? 'Mettre à jour' : 'Ajouter l\'animal'}
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{initialData ? 'Mettre à jour' : 'Ajouter l\'animal'}</span>
             </>
           )}
         </button>

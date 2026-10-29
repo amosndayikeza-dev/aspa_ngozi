@@ -4,34 +4,43 @@
    1. CONFIGURATION DU THÈME (Tailwind v4)
    ========================================= */
 @theme {
-  /* --- Couleurs Principales (Palette Emerald Pro) --- */
+  /* --- Couleurs Principales (Obsidian & Emerald Luminescence) --- */
   
-  /* Primaire : Teal profond (Sidebar, boutons principaux) */
-  --color-brand-dark: #0F766E;       
+  /* Obsidian Navy pour la Sidebar et les conteneurs sombres */
+  --color-brand-obsidian: #0B111E;
+  --color-brand-obsidian-hover: #162035;
+  --color-brand-obsidian-card: #111A2E;
+  --color-brand-obsidian-border: rgba(255, 255, 255, 0.08);
+
+  /* Primaire : Émeraude clinique profond */
+  --color-brand-dark: #0D5F54;       
   
-  /* Accent : Teal vif (Hover, éléments actifs) */
-  --color-brand-medium: #14B8A6;     
+  /* Accent : Émeraude vif / Mint luminescent */
+  --color-brand-medium: #10B981;     
+  --color-brand-neon: #34D399;
+
+  /* Fond secondaire : Menthe doux / Badges */
+  --color-brand-light: #E6F8F3;      
   
-  /* Fond secondaire : Menthe clair (Badges, avatars, fonds doux) */
-  --color-brand-light: #CCFBF1;      
-  
-  /* Fond principal : Gris bleuté très clair (Fond du Dashboard) */
-  --color-brand-bg: #F8FAFC;         
+  /* Fond principal : Ardoise ultra-clair haute netteté */
+  --color-brand-bg: #F4F6F9;         
 
   /* --- Textes --- */
-  /* Texte principal : Bleu-gris très foncé (Pour une lisibilité parfaite) */
   --color-text-main: #0F172A;        
-  /* Texte secondaire : Gris moyen (Sous-titres) */
   --color-text-muted: #64748B;       
+  --color-text-subtle: #94A3B8;
 
-  /* --- Couleurs Systèmes (Alertes, Erreurs) --- */
-  --color-vet-danger: #EF4444;       /* Rouge pour les alertes/erreurs */
-  --color-vet-gold: #F59E0B;         /* Orange pour les avertissements */
+  /* --- Couleurs Systèmes (Alertes, Erreurs, Statuts) --- */
+  --color-vet-danger: #EF4444;       /* Rouge clinique */
+  --color-vet-gold: #F59E0B;         /* Ambre chaud */
   --color-vet-success: #10B981;      /* Vert succès */
+  --color-vet-indigo: #6366F1;
+  --color-vet-cyan: #0EA5E9;
 
   /* --- Typographie --- */
   --font-sans: 'Inter Variable', system-ui, sans-serif;
   --font-display: 'Inter Variable', system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 /* =========================================

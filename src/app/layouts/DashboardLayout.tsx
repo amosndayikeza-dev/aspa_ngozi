@@ -23,7 +23,7 @@ export function DashboardLayout() {
                  *  overflow-y-auto permet de scroller SEULEMENT cette zone,
                 sans faire bouger la Sidebar ni le Header. 
                 */}
-                <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+                <main className="flex-1 overflow-y-auto p-4 lg:p-5">
                     <Outlet />
                 </main>
             </div>

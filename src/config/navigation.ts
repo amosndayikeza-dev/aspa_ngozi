@@ -64,7 +64,7 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         items: [
             {
                 label: 'Stock & Inventaire',
-                path: '/stocks',
+                path: '/stock',
                 icon: Truck,
                 //seul de boss gere le stock physique
                 allowedRoles: ['PHARMACIEN'],

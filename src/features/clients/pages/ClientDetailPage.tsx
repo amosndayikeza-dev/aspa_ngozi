@@ -10,6 +10,7 @@ import type { Client, Animal } from '../types';
 import { Modal } from '@/shared/ui/Modal';
 import { AnimalForm } from '../components/AnimalForm';
 import { ClientForm } from '../components/ClientForm';
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { toast } from 'sonner';
 
 export function ClientDetailPage() {
@@ -23,6 +24,11 @@ export function ClientDetailPage() {
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  // etat de supprssion
+  const [isDeleteAnimalModalOpen, setIsDeleteAnimalModalOpen] = useState(false);
+  const [animalToDelete, setAnimalToDelete] = useState<Animal | null>(null);
+  const [isDeletingAnimal, setIsDeletingAnimal] = useState(false);
 
   // animal en cours de manipulation
   const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null);
@@ -69,15 +75,26 @@ export function ClientDetailPage() {
     setSelectedAnimal(null);
   };
 
-  // --- SUPPRESSION D'UN ANIMAL ---
-  const handleDeleteAnimal = (animalId: string, animalName: string) => {
-    if (!client) return;
-    if (window.confirm(`Voulez-vous vraiment supprimer le dossier de ${animalName} ?`)) {
-      setClient({
-        ...client,
-        animaux: client.animaux.filter(a => a.id !== animalId)
-      });
-      toast.success(`Le dossier de ${animalName} a été  supprimé`);
+  // Ouvre la modale de suppression
+  const handleOpenDeleteAnimal = (animal: Animal) => {
+    setAnimalToDelete(animal);
+    setIsDeleteAnimalModalOpen(true);
+  };
+
+  // Exécute la suppression
+  const handleConfirmDeleteAnimal = async () => {
+    if (!client || !animalToDelete) return;
+    setIsDeletingAnimal(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setClient({ ...client, animaux: client.animaux.filter(a => a.id !== animalToDelete.id) });
+      toast.success(`Le dossier de ${animalToDelete.nom} a été supprimé`);
+      setIsDeleteAnimalModalOpen(false);
+    } catch (error) {
+      toast.error("Erreur lors de la suppression");
+    } finally {
+      setIsDeletingAnimal(false);
+      setAnimalToDelete(null);
     }
   };
 
@@ -115,186 +132,187 @@ export function ClientDetailPage() {
   };
 
   return (
-    <div className="space-y-5 max-w-[1600px] mx-auto pb-10">
-      
-      {/* --- BOUTON RETOUR --- */}
+    <div className="space-y-4 max-w-[1600px] mx-auto pb-10">
+
+      {/* --- Fil d'Ariane retour --- */}
       <div>
-        <button 
+        <button
           onClick={() => navigate('/clients')}
-          className="flex items-center gap-1.5 text-xs font-medium text-text-muted hover:text-brand-dark hover:bg-gray-50 transition-colors px-2.5 py-1.5 rounded-lg w-fit"
+          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-md transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Retour aux clients
         </button>
       </div>
 
-      {/* --- LAYOUT ASYMÉTRIQUE --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        
-        {/* =======================================
-            COLONNE GAUCHE (Profil)
-            ======================================= */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="h-1 bg-brand-dark" />
+      {/* --- LAYOUT ASYMÉTRIQUE 4+8 --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
-          <div className="p-5 flex flex-col">
+        {/* ============================================
+            COLONNE GAUCHE — Profil Client
+            ============================================ */}
+        <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+          {/* Accent stripe emerald */}
+          <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
+
+          <div className="p-4 flex flex-col">
+            {/* Avatar + nom */}
             <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-xl bg-brand-light text-brand-dark flex items-center justify-center font-semibold text-sm shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shrink-0 ring-2 ring-emerald-200/60">
                 {client.nom.charAt(0)}{client.prenom.charAt(0)}
               </div>
               <div className="min-w-0 pt-0.5">
-                <h1 className="text-sm font-semibold text-text-main truncate">{client.nom} {client.prenom}</h1>
-                <div className="flex items-center gap-1.5 text-xs text-text-muted mt-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  Client depuis le {new Date(client.dateInscription).toLocaleDateString('fr-FR')}
+                <h1 className="text-sm font-bold text-slate-900 truncate">{client.nom} {client.prenom}</h1>
+                <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
+                  <Calendar className="w-3 h-3" />
+                  <span>Depuis le <span className="font-mono">{new Date(client.dateInscription).toLocaleDateString('fr-FR')}</span></span>
                 </div>
               </div>
             </div>
 
             <button
               onClick={() => setIsClientModalOpen(true)}
-              className="w-full mt-5 h-8 bg-gray-50 text-text-muted hover:text-brand-dark hover:bg-brand-light/30 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors">
+              className="w-full mt-4 h-8 bg-slate-50 border border-slate-200/80 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+            >
               <Edit className="w-3.5 h-3.5" />
               Modifier le profil
             </button>
 
-            <div className="mt-5 pt-5 border-t border-gray-100 space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="p-1.5 bg-brand-light/30 rounded-lg text-brand-dark"><Phone className="w-3.5 h-3.5" /></div>
+            {/* Contacts */}
+            <div className="mt-4 pt-4 border-t border-slate-100 space-y-3.5">
+              <div className="flex items-start gap-2.5">
+                <div className="p-1.5 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600 shrink-0">
+                  <Phone className="w-3.5 h-3.5" />
+                </div>
                 <div>
-                  <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-0.5">Téléphone</p>
-                  <p className="text-sm text-text-main">{client.telephone}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Téléphone</p>
+                  <p className="text-xs font-mono text-slate-800">{client.telephone}</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="p-1.5 bg-brand-light/30 rounded-lg text-brand-dark"><Mail className="w-3.5 h-3.5" /></div>
+              <div className="flex items-start gap-2.5">
+                <div className="p-1.5 bg-slate-50 border border-slate-200/70 rounded-lg text-slate-500 shrink-0">
+                  <Mail className="w-3.5 h-3.5" />
+                </div>
                 <div>
-                  <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-0.5">Email</p>
-                  <p className="text-sm text-text-main">{client.email}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Email</p>
+                  <p className="text-xs text-slate-800 break-all">{client.email}</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="p-1.5 bg-brand-light/30 rounded-lg text-brand-dark"><MapPin className="w-3.5 h-3.5" /></div>
+              <div className="flex items-start gap-2.5">
+                <div className="p-1.5 bg-slate-50 border border-slate-200/70 rounded-lg text-slate-500 shrink-0">
+                  <MapPin className="w-3.5 h-3.5" />
+                </div>
                 <div>
-                  <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-0.5">Adresse</p>
-                  <p className="text-sm text-text-main">{client.adresse}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Adresse</p>
+                  <p className="text-xs text-slate-800">{client.adresse}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* =======================================
-            COLONNE DROITE (Animaux)
-            ======================================= */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col">
-          
-          {/* En-tête de la section Animaux */}
-          <div className="p-5 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 bg-brand-light/30 text-brand-dark rounded-lg">
-                <PawPrint className="w-4 h-4" />
+        {/* ============================================
+            COLONNE DROITE — Animaux (table haute densité)
+            ============================================ */}
+        <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col">
+
+          {/* En-tête section animaux */}
+          <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-violet-50 border border-violet-100 rounded-lg text-violet-600">
+                <PawPrint className="w-3.5 h-3.5" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-text-main">Animaux enregistrés</h2>
-                <p className="text-xs text-text-muted">Dossiers médicaux des patients</p>
+                <h2 className="text-xs font-bold text-slate-900">Animaux enregistrés</h2>
+                <p className="text-[11px] text-slate-400">Dossiers patients de ce propriétaire</p>
               </div>
-              <span className="bg-brand-light text-brand-dark text-xs font-semibold px-2 py-0.5 rounded-md">
+              <span className="ml-1 bg-violet-100 text-violet-700 text-[11px] font-bold px-2 py-0.5 rounded-full border border-violet-200/70">
                 {client.animaux.length}
               </span>
             </div>
-            
-            <button 
+
+            <button
               onClick={handleOpenCreateAnimal}
-              className="h-8 px-3 bg-brand-dark hover:bg-brand-medium text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+              className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
             >
               <Plus className="w-3.5 h-3.5" />
               Nouvel animal
             </button>
           </div>
 
-          {/* Tableau des Animaux */}
+          {/* Table des animaux */}
           <div className="flex-1 overflow-x-auto">
             {client.animaux.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center mb-3">
-                  <PawPrint className="w-5 h-5 text-text-muted" />
+              <div className="h-full flex flex-col items-center justify-center py-14 text-center">
+                <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-center mb-2.5">
+                  <PawPrint className="w-5 h-5 text-slate-300" />
                 </div>
-                <p className="text-sm font-semibold text-text-main">Aucun animal</p>
-                <p className="text-xs text-text-muted mt-1">Ce client n'a pas encore de dossier animal.</p>
+                <p className="text-xs font-semibold text-slate-700">Aucun animal</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Ce client n'a pas encore de dossier animal.</p>
               </div>
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-gray-100 text-xs font-semibold text-text-muted uppercase tracking-wider bg-gray-50">
-                    <th className="px-4 py-2.5">Patient</th>
-                    <th className="px-4 py-2.5">Espèce & Race</th>
-                    <th className="px-4 py-2.5">Âge</th>
-                    <th className="px-4 py-2.5">Poids</th>
-                    <th className="px-4 py-2.5 text-right whitespace-nowrap">Actions</th>
+                  <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="px-3.5 py-2">Patient</th>
+                    <th className="px-3.5 py-2">Espèce & Race</th>
+                    <th className="px-3.5 py-2">Âge</th>
+                    <th className="px-3.5 py-2">Poids</th>
+                    <th className="px-3.5 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-slate-100/80">
                   {client.animaux.map((animal) => {
                     const age = new Date().getFullYear() - new Date(animal.dateNaissance).getFullYear();
                     return (
-                      <tr key={animal.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-brand-light/30 flex items-center justify-center text-sm">
+                      <tr key={animal.id} className="hover:bg-slate-50/70 transition-colors duration-150">
+                        <td className="px-3.5 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center text-base shrink-0">
                               {speciesEmoji[animal.espece] || '🐾'}
                             </div>
-                            <span className="text-xs font-semibold text-text-main">{animal.nom}</span>
+                            <span className="text-xs font-semibold text-slate-800">{animal.nom}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <p className="text-xs font-medium text-text-main">{animal.espece}</p>
-                          <p className="text-xs text-text-muted">{animal.race}</p>
+                        <td className="px-3.5 py-2">
+                          <p className="text-xs font-medium text-slate-800">{animal.espece}</p>
+                          <p className="text-[11px] text-slate-400">{animal.race}</p>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 text-xs text-text-muted">
-                            <Cake className="w-3.5 h-3.5" />
-                            {age} an{age > 1 ? 's' : ''}
+                        <td className="px-3.5 py-2">
+                          <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                            <Cake className="w-3 h-3 text-slate-400" />
+                            <span className="font-mono">{age} an{age > 1 ? 's' : ''}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 text-xs text-text-muted">
-                            <Weight className="w-3.5 h-3.5" />
-                            {animal.poidsKg ? `${animal.poidsKg} kg` : '-'}
+                        <td className="px-3.5 py-2">
+                          <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                            <Weight className="w-3 h-3 text-slate-400" />
+                            <span className="font-mono">{animal.poidsKg ? `${animal.poidsKg} kg` : '—'}</span>
                           </div>
                         </td>
-                        
-                        {/* --- COLONNE ACTIONS (MISE À JOUR) --- */}
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-3.5 py-2 text-right">
                           <div className="flex items-center justify-end gap-0.5">
-                            
-                            {/* Bouton Voir */}
-                            <button 
+                            <button
                               onClick={() => handleOpenViewAnimal(animal)}
-                              className="p-1.5 text-text-muted hover:text-brand-dark hover:bg-brand-light/30 rounded-lg transition-colors" 
-                              title="Voir le dossier médical"
+                              className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors"
+                              title="Voir le dossier"
                             >
                               <Eye className="w-3.5 h-3.5" />
                             </button>
-
-                            {/* Bouton Modifier */}
-                            <button 
-                              onClick={() => handleOpenEditAnimal(animal) }
-                              className="p-1.5 text-text-muted hover:text-brand-dark hover:bg-brand-light/30 rounded-lg transition-colors" 
+                            <button
+                              onClick={() => handleOpenEditAnimal(animal)}
+                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors"
                               title="Modifier"
                             >
                               <Edit className="w-3.5 h-3.5" />
                             </button>
-
-                            {/* Bouton Supprimer */}
-                            <button 
-                              onClick={() => handleDeleteAnimal(animal.id, animal.nom)}
-                              className="p-1.5 text-text-muted hover:text-vet-danger hover:bg-vet-danger/10 rounded-lg transition-colors" 
+                            <button
+                              onClick={() => handleOpenDeleteAnimal(animal)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
                               title="Supprimer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
-
                           </div>
                         </td>
                       </tr>
@@ -385,6 +403,15 @@ export function ClientDetailPage() {
         />
 
       </Modal>
+
+      <ConfirmDialog
+        isOpen={isDeleteAnimalModalOpen}
+        onClose={() => setIsDeleteAnimalModalOpen(false)}
+        onConfirm={handleConfirmDeleteAnimal}
+        title="Supprimer cet animal ?"
+        description={`Voulez-vous vraiment supprimer le dossier de ${animalToDelete?.nom} ? Cette action est irréversible.`}
+        isLoading={isDeletingAnimal}
+      />
 
     </div>
   );

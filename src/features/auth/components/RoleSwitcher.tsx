@@ -27,22 +27,23 @@ export function RoleSwitcher() {
     };
 
     return (
-        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+        <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200/60">
             {ROLES.map((r) => (
                 <button
                 key={r.value}
                 onClick={() => handleSwitch(r.value)}
                 className={cn(
-                    'text-2xs px-2 py-1 rounded font-medium transition-colors',
+                    'text-[10px] px-2 py-0.5 rounded-md font-medium transition-all cursor-pointer flex items-center gap-1',
                     user?.role === r.value
-                    ? 'bg-vet-green text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-white text-slate-800 font-semibold shadow-2xs border border-slate-200/80'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/40'
                 )}
-                title={`Passer en ${r.label}`}
+                title={`Passer en mode ${r.label}`}
                 >
-                {r.emoji}
+                  <span className="text-xs leading-none">{r.emoji}</span>
+                  <span className="hidden xl:inline text-[10px]">{r.label}</span>
                 </button>
             ))}
         </div>
-  );
+    );
 }

@@ -6,6 +6,10 @@ import { DashboardLayout } from '../layouts/DashboardLayout';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { ClientListPage } from "@/features/clients/pages/ClientListPage";
 import { ClientDetailPage } from '@/features/clients/pages/ClientDetailPage';
+import { MedicamentListPage } from "@/features/stock/pages/MedicamentListPage";
+import { POSPage } from "@/features/ventes/pages/POSPage";
+import { NouvelAchatPage } from '@/features/stock/pages/NouvelAchatPage';
+import { InventairePage } from '@/features/stock/pages/InventairePage';
 
 /**
  * Petite page temporaire pour verifier que le routing fonctionne.
@@ -40,8 +44,13 @@ export function AppRouter() {
             <Route path="/clients" element={<ClientListPage />} />
             <Route path="/clients/:id" element={<ClientDetailPage />} />
             
+            
+            
             {/* Exemple de route existante */}
-            <Route path="/stock" element={<div className="p-4 bg-white rounded-xl">Page Stock (à coder)</div>} />
+            <Route path="/stock" element={<MedicamentListPage />} />
+            <Route path="/stock/achats/nouveau" element={<NouvelAchatPage />} />
+            <Route path="/stock/inventaire" element={<InventairePage />} />
+            <Route path="/vente" element={<POSPage />}  />
             
             <Route path="/403" element={<ForbiddenPage />} />
           </Route>
