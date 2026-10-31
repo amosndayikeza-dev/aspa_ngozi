@@ -1,5 +1,3 @@
-// src/shared/lib/tauri.ts
-
 import { resolve } from "node:dns";
 
 /**

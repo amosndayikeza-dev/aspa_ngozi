@@ -17,11 +17,18 @@ export function Panier({ lignes, onUpdateQuantite, onRemove, onCheckout }: Panie
   const dateFormatted = now.toLocaleDateString('fr-FR');
   const timeFormatted = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
+  //---- fonction pour lancer l'impression ----
+  const handlePrint = () => {
+    window.print();
+  }
+
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden font-mono text-slate-900 select-none">
+    // 1. AJOUT DE L'ID POUR L'IMPRESSION
+    <div id="ticket-imprimable" className="flex flex-col h-full bg-white rounded-xl border border-slate-300 shadow-md overflow-hidden font-mono text-slate-900 select-none print:border-none print:shadow-none print:h-auto print:overflow-visible">
       
       {/* --- EN-TÊTE DU TICKET THERMIQUE --- */}
-      <div className="p-3.5 pb-2 border-b border-dashed border-slate-300 text-center bg-slate-50/40">
+      {/* 2. RETRAIT DU print:hidden ICI POUR QUE L'EN-TÊTE S'IMPRIME */}
+      <div className="p-3.5 pb-2 border-b border-dashed border-slate-300 text-center bg-slate-50/40 print:bg-white">
         <div className="flex justify-center mb-1.5">
           <img 
             src="/logo.png" 
@@ -47,15 +54,16 @@ export function Panier({ lignes, onUpdateQuantite, onRemove, onCheckout }: Panie
       </div>
 
       {/* En-tête des colonnes du reçu */}
-      <div className="px-3.5 py-1.5 bg-slate-100/70 border-b border-dashed border-slate-300 flex justify-between items-center text-[10px] font-bold text-slate-700 uppercase">
+      <div className="px-3.5 py-1.5 bg-slate-100/70 border-b border-dashed border-slate-300 flex justify-between items-center text-[10px] font-bold text-slate-700 uppercase print:bg-white">
         <span>Désignation / P.U</span>
         <span>Qté x Total</span>
       </div>
 
-      {/* --- LISTE DES ARTICLES DU REÇU (Zone déroulante) --- */}
-      <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5 no-scrollbar bg-white">
+      {/* --- LISTE DES ARTICLES DU REÇU --- */}
+      {/* 3. AJOUT DE print:overflow-visible POUR NE PAS COUPER LE TICKET */}
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5 no-scrollbar bg-white print:overflow-visible print:h-auto">
         {lignes.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center py-8 opacity-60">
+          <div className="h-full flex flex-col items-center justify-center text-center py-8 opacity-60 print:hidden">
             <Receipt className="w-8 h-8 text-slate-400 mb-2 stroke-1" />
             <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">*** TICKET VIERGE ***</p>
             <p className="text-[10px] text-slate-500 mt-1">Sélectionnez un article du catalogue pour débuter la vente.</p>
@@ -82,7 +90,12 @@ export function Panier({ lignes, onUpdateQuantite, onRemove, onCheckout }: Panie
                   @ {ligne.medicament.prixVente.toLocaleString('fr-FR')} FBU
                 </span>
 
-                <div className="flex items-center gap-2">
+                {/* 4. AJOUT DU TEXTE POUR L'IMPRESSION (remplace les boutons sur le papier) */}
+                <span className="hidden print:inline text-[10px] font-bold">
+                  Qté: {ligne.quantite}
+                </span>
+
+                <div className="flex items-center gap-2 print:hidden">
                   {/* Micro-contrôleur de quantité */}
                   <div className="flex items-center border border-slate-300 rounded bg-slate-50 p-0.5">
                     <button 
@@ -120,7 +133,7 @@ export function Panier({ lignes, onUpdateQuantite, onRemove, onCheckout }: Panie
       </div>
 
       {/* --- PIED DU TICKET THERMIQUE --- */}
-      <div className="p-3.5 border-t-2 border-dashed border-slate-400 bg-slate-50/50 space-y-2">
+      <div className="p-3.5 border-t-2 border-dashed border-slate-400 bg-slate-50/50 space-y-2 print:bg-white">
         {/* Décompte */}
         <div className="space-y-1 text-[11px] text-slate-600">
           <div className="flex justify-between">
@@ -134,18 +147,18 @@ export function Panier({ lignes, onUpdateQuantite, onRemove, onCheckout }: Panie
         </div>
 
         {/* Encadré Total Mis en Évidence */}
-        <div className="bg-slate-950 text-white p-2.5 rounded-lg flex justify-between items-center shadow-inner">
+        <div className="bg-slate-950 text-white p-2.5 rounded-lg flex justify-between items-center shadow-inner print:bg-white print:text-black print:border print:border-black print:shadow-none">
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Total à Payer</span>
-            <span className="text-[9px] text-slate-400">Net à régler</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 print:text-black">Total à Payer</span>
+            <span className="text-[9px] text-slate-400 print:text-gray-600">Net à régler</span>
           </div>
-          <span className="text-xl font-bold font-mono tracking-tight text-white tabular-nums">
+          <span className="text-xl font-bold font-mono tracking-tight text-white tabular-nums print:text-black">
             {total.toLocaleString('fr-FR')} FBU
           </span>
         </div>
 
-        {/* Boutons d'Action */}
-        <div className="space-y-1.5 pt-1">
+        {/* Boutons d'Action (Cachés à l'impression) */}
+        <div className="space-y-1.5 pt-1 print:hidden">
           <button
             onClick={onCheckout}
             disabled={lignes.length === 0}
@@ -156,7 +169,7 @@ export function Panier({ lignes, onUpdateQuantite, onRemove, onCheckout }: Panie
           </button>
 
           <button
-            onClick={() => window.print()}
+            onClick={handlePrint}
             disabled={lignes.length === 0}
             className="w-full h-7 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg text-[11px] font-semibold font-sans flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >

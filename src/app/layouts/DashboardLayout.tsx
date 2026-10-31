@@ -7,23 +7,30 @@ export function DashboardLayout() {
     //Etat pour gerer l'ouverture et la fermeture du sidebar
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     return (
-        <div className="flex h-screen w-full bg-brand-bg overflow-hidden font-sans">
+        <div className="flex h-screen w-full bg-brand-bg overflow-hidden font-sans print:bg-white">
             
-            {/**La sidebar est fixe a gauche */}
-            <Sidebar
-                isOpen={isSidebarOpen}
-                onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
+            {/** -----on cache le sidebar a l'impression -------- */}
+            <div className="print:hidden">
+                <Sidebar
+                    isOpen={isSidebarOpen}
+                    onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+            </div>
+            
             
             {/**La partie a droite qui contient le header et le contenu defilable */}
-            <div className="flex-1 flex flex-col min-w-0">
-                <Header />
+            <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 print:block print:w-full">
+                {/** ---- on cache le header a l'impression ------- */}
+                <div className="print:hidden">
+                    <Header />
+                </div>
+                
 
                 {/** c'est ic qu'on va afficher les pages (Dashboard,ventes...) s'affichent 
                  *  overflow-y-auto permet de scroller SEULEMENT cette zone,
                 sans faire bouger la Sidebar ni le Header. 
                 */}
-                <main className="flex-1 overflow-y-auto p-4 lg:p-5">
+                <main className="flex-1 overflow-y-auto p-4 lg:p-5 print:p-0 print::overflow-visible">
                     <Outlet />
                 </main>
             </div>

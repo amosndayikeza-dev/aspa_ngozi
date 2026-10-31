@@ -4,33 +4,32 @@
    1. CONFIGURATION DU THÈME (Tailwind v4)
    ========================================= */
 @theme {
-  /* --- Couleurs Principales (Obsidian & Emerald Luminescence) --- */
   
-  /* Obsidian Navy pour la Sidebar et les conteneurs sombres */
+  /*----------------------------------------------------------couleurs du sidebar */
   --color-brand-obsidian: #0B111E;
   --color-brand-obsidian-hover: #162035;
   --color-brand-obsidian-card: #111A2E;
   --color-brand-obsidian-border: rgba(255, 255, 255, 0.08);
 
-  /* Primaire : Émeraude clinique profond */
+  /* ---------------- ----------------------------------------Primaire : Émeraude clinique profond */
   --color-brand-dark: #0D5F54;       
   
-  /* Accent : Émeraude vif / Mint luminescent */
+  /* ---------------------------------------------------------Accent : Émeraude vif / Mint luminescent */
   --color-brand-medium: #10B981;     
   --color-brand-neon: #34D399;
 
-  /* Fond secondaire : Menthe doux / Badges */
+  /* ----------------------------------------------------------Fond secondaire : Menthe doux / Badges */
   --color-brand-light: #E6F8F3;      
   
-  /* Fond principal : Ardoise ultra-clair haute netteté */
+  /* -----------------------------------------------------------Fond principal : Ardoise ultra-clair haute netteté */
   --color-brand-bg: #F4F6F9;         
 
-  /* --- Textes --- */
+  /* --- -------------------------------------------------------Textes --- */
   --color-text-main: #0F172A;        
   --color-text-muted: #64748B;       
   --color-text-subtle: #94A3B8;
 
-  /* --- Couleurs Systèmes (Alertes, Erreurs, Statuts) --- */
+  /* --- -------------------------------------------------------Couleurs Systèmes (Alertes, Erreurs, Statuts) --- */
   --color-vet-danger: #EF4444;       /* Rouge clinique */
   --color-vet-gold: #F59E0B;         /* Ambre chaud */
   --color-vet-success: #10B981;      /* Vert succès */
@@ -70,4 +69,30 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;  
   scrollbar-width: none;  
+}
+
+@media print{
+  @page{
+    size:80mm auto;
+    margin: 0;
+  }
+
+  /* ----------cache tout le body par defaut ------------------**/
+  body * {
+    visibility: hidden;
+  }
+
+  /** ------- rend visible le ticket seulement et ce qu'il contient ------*/
+  #ticket-imprimable,#ticket-imprimable * {
+    visibility: visible;
+  }
+
+  /* -----passionne le ticket en haut de la page ----*/
+  #ticket-imprimable{
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border:none !important;
+  }
 }

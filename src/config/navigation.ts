@@ -90,7 +90,7 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
                 label: 'Utilisateur & Roles',
                 path: '/utilisateurs',
                 icon: ShieldCheck,
-                allowedRoles: ['ADMIN', 'PHARMACIEN'],
+                allowedRoles: ['ADMIN'],
             },
             {
                 label: 'Parametres',

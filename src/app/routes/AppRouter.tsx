@@ -10,6 +10,13 @@ import { MedicamentListPage } from "@/features/stock/pages/MedicamentListPage";
 import { POSPage } from "@/features/ventes/pages/POSPage";
 import { NouvelAchatPage } from '@/features/stock/pages/NouvelAchatPage';
 import { InventairePage } from '@/features/stock/pages/InventairePage';
+import { Ordonnance } from "@/features/ordonnances/types";
+import { OrdonnanceListPage } from "@/features/ordonnances/pages/OrdonnanceListPage";
+import { OrdonnanceFormPage } from "@/features/ordonnances/pages/OrdonnanceFormPage";
+import { OrdonnanceDetailPage } from '@/features/ordonnances/pages/OrdonnanceDetailPage';
+import { FournisseurListPage } from '@/features/stock/pages/FournisseurListPage';
+import { UserListPage } from "@/features/administartion/pages/UserListPage";
+
 
 /**
  * Petite page temporaire pour verifier que le routing fonctionne.
@@ -48,9 +55,14 @@ export function AppRouter() {
             
             {/* Exemple de route existante */}
             <Route path="/stock" element={<MedicamentListPage />} />
+            <Route path="/achats" element={<FournisseurListPage />} />
             <Route path="/stock/achats/nouveau" element={<NouvelAchatPage />} />
             <Route path="/stock/inventaire" element={<InventairePage />} />
-            <Route path="/vente" element={<POSPage />}  />
+            <Route path="/vente" element={<POSPage />} />
+            <Route path="/ordonnances" element={<OrdonnanceListPage />} />
+            <Route path="/ordonnances/nouveau" element={<OrdonnanceFormPage />} />
+            <Route path="/ordonnances/:id" element={<OrdonnanceDetailPage />} />
+            <Route path="/utilisateurs" element={<UserListPage />} />
             
             <Route path="/403" element={<ForbiddenPage />} />
           </Route>

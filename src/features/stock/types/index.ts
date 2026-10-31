@@ -40,6 +40,8 @@ export interface Medicament {
 export interface Fournisseur {
   id: string;
   nom: string;
+  telephone: string;
+  email: string;
 }
 
 /** Une ligne de commande chez un fournisseur */

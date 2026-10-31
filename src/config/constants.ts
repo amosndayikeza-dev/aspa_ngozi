@@ -1,6 +1,6 @@
 /** Devise utilise dans toute l'application */
 
-export const DEVISE = 'MGA';
+export const DEVISE = 'FBU';
 
 /** taux de TVA applique par defaut */
 export const TVA_RATE = 20;

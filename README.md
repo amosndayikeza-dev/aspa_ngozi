@@ -34,24 +34,6 @@ Avant de cloner et de lancer le projet, assurez-vous d'avoir installé :
 1. **Cloner le dépôt**
    ```bash
    git clone https://github.com/amosndayikeza-dev/aspa_ngozi.git
-   cd aspa_ngozi# VetPharma (ASPA NGOZI) — Gestion de Pharmacie Vétérinaire
-
-Application desktop moderne conçue pour la gestion complète d'une pharmacie vétérinaire : clients, animaux, ordonnances, stocks, ventes et facturation.
-
-## 📋 Prérequis
-
-Avant de cloner et de lancer le projet, assurez-vous d'avoir installé :
-
-- **Node.js** (v18 ou supérieur) et **npm**
-- **Rust** (pour le backend Tauri) : [rustup.rs](https://rustup.rs/)
-- **Tauri CLI** : `npm install -D @tauri-apps/cli`
-- Un éditeur de code (VS Code recommandé)
-
-## 🚀 Installation et lancement (Mode Développement)
-
-1. **Cloner le dépôt**
-   ```bash
-   git clone https://github.com/amosndayikeza-dev/aspa_ngozi.git
    cd aspa_ngozi
 
    Installer les dépendances frontend
