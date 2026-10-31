@@ -21,9 +21,9 @@ export const statsApi = {
             { jour: 'Dim', ventes: 190000 },
           ],
           repartitionCategories: [
-            { name: 'Médicaments', value: 4500000, color: '#10b981' }, // emerald-500
-            { name: 'Aliments', value: 2500000, color: '#3b82f6' }, // blue-500
-            { name: 'Accessoires', value: 800000, color: '#f59e0b' }, // amber-500
+            { name: 'Antibiotique', value: 4500000, color: '#10b981' }, 
+            { name: 'Aliments', value: 2500000, color: '#3b82f6' }, 
+            { name: 'Vaccin', value: 800000, color: '#f59e0b' }, 
           ],
           topProduits: [
             { nom: 'Amoxicilline 500mg', ventes: 145, ca: 362500 },
