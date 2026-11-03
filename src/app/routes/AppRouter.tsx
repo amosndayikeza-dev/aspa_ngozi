@@ -16,6 +16,7 @@ import { OrdonnanceFormPage } from "@/features/ordonnances/pages/OrdonnanceFormP
 import { OrdonnanceDetailPage } from '@/features/ordonnances/pages/OrdonnanceDetailPage';
 import { FournisseurListPage } from '@/features/stock/pages/FournisseurListPage';
 import { UserListPage } from "@/features/administartion/pages/UserListPage";
+import { SettingsPage } from '@/features/settings/pages/SettingsPage';
 
 
 /**
@@ -50,7 +51,7 @@ export function AppRouter() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/clients" element={<ClientListPage />} />
             <Route path="/clients/:id" element={<ClientDetailPage />} />
-            
+            <Route path="/parametres" element={<SettingsPage />} />
             
             
             {/* Exemple de route existante */}

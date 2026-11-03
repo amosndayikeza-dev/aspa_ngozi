@@ -96,7 +96,7 @@ export function DashboardPage() {
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `${val / 1000}k`} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
-                  formatter={(value: number) => [`${value.toLocaleString('fr-FR')} FBU`, 'Ventes']}
+                  formatter={(value: any) => [`${value.toLocaleString('fr-FR')} FBU`, 'Ventes']}
                 />
                 <Area type="monotone" dataKey="ventes" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorVentes)" />
               </AreaChart>
@@ -119,7 +119,7 @@ export function DashboardPage() {
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value: number) => `${value.toLocaleString('fr-FR')} FBU`}
+                  formatter={(value: any) => [`${value.toLocaleString('fr-FR')} FBU`, '']}
                   contentStyle={{ borderRadius: '8px', border: 'none', fontSize: '11px' }}
                 />
               </PieChart>
