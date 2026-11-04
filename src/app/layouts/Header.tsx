@@ -3,9 +3,12 @@ import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, ChevronDown, LogOut, User, Settings } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { RoleSwitcher } from '@/features/auth';
+import { Notification } from '@/features/notifications/types';
+import { NotificationPanel } from '@/features/notifications/components/NotificationPanel';
 
 export function Header() {
   const { user, logout } = useAuth();
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   
   // 1. État pour savoir si le menu est ouvert ou fermé
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -59,7 +62,8 @@ export function Header() {
 
         {/* Notifications */}
         <button 
-          className="relative p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+          onClick={() => setIsNotifOpen(true)}
+          className="relative p-2 text-slate-500 hover:text-emerald-600 transition-colors print:hidden"
           title="Notifications"
         >
           <Bell className="w-4 h-4" />
@@ -126,6 +130,8 @@ export function Header() {
         </div>
 
       </div>
+      {/***------------------- Panneau de notifications --------- */}
+      <NotificationPanel isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
     </header>
   );
 }

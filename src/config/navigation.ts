@@ -98,6 +98,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
                 icon: Settings,
                 allowedRoles: ['ADMIN'],
             },
+            {
+                label: 'Journal d\'Audit',
+                path: '/audit',
+                icon: ShieldCheck,
+                allowedRoles:['ADMIN','PHARMACIEN']
+            }
         ],
     },
 ];

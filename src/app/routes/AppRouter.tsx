@@ -17,7 +17,8 @@ import { OrdonnanceDetailPage } from '@/features/ordonnances/pages/OrdonnanceDet
 import { FournisseurListPage } from '@/features/stock/pages/FournisseurListPage';
 import { UserListPage } from "@/features/administartion/pages/UserListPage";
 import { SettingsPage } from '@/features/settings/pages/SettingsPage';
-
+import { AuditLog } from "@/features/administartion/types";
+import { AuditLogPage } from "@/features/audit/pages/AuditLogPage";
 
 /**
  * Petite page temporaire pour verifier que le routing fonctionne.
@@ -52,6 +53,7 @@ export function AppRouter() {
             <Route path="/clients" element={<ClientListPage />} />
             <Route path="/clients/:id" element={<ClientDetailPage />} />
             <Route path="/parametres" element={<SettingsPage />} />
+            <Route path="/audit" element={<AuditLogPage />} />
             
             
             {/* Exemple de route existante */}
