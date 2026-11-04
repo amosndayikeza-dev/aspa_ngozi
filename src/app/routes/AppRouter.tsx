@@ -19,6 +19,8 @@ import { UserListPage } from "@/features/administartion/pages/UserListPage";
 import { SettingsPage } from '@/features/settings/pages/SettingsPage';
 import { AuditLog } from "@/features/administartion/types";
 import { AuditLogPage } from "@/features/audit/pages/AuditLogPage";
+import { ReportPage } from "@/features/reports/pages/ReportsPage";
+
 
 /**
  * Petite page temporaire pour verifier que le routing fonctionne.
@@ -54,6 +56,9 @@ export function AppRouter() {
             <Route path="/clients/:id" element={<ClientDetailPage />} />
             <Route path="/parametres" element={<SettingsPage />} />
             <Route path="/audit" element={<AuditLogPage />} />
+            <Route element={<ProtectedRoute allowedRoles={['PHARMACIEN']} /> } >
+              <Route path="/rapports" element={<ReportPage /> } />
+            </Route>
             
             
             {/* Exemple de route existante */}
