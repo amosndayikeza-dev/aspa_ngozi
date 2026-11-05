@@ -75,7 +75,8 @@ export function ReportPage() {
             </div>
         </div>
 
-      {/* --- CARTES KPI --- */}
+        {/* --- ----------------------------------------------------------------CARTES KPI --------------------------------------------------------
+          ------------------------------------------------------------------------------------------------------------------------------------------- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-slate-900 p-4 rounded-xl shadow-md text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
@@ -123,7 +124,8 @@ export function ReportPage() {
       {/* --- GRAPHIQUES --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         
-        {/* Graphique Barres (Revenus vs Dépenses) */}
+        {/* -----------------------Graphique Barres (Revenus vs Dépenses)--------------- 
+            ----------------------------------------------------------------------------------*/}
         <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/90 shadow-sm p-4 flex flex-col">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-sm font-bold text-slate-900">Revenus vs Dépenses</h2>
@@ -147,7 +149,8 @@ export function ReportPage() {
           </div>
         </div>
 
-        {/* Performance des Vendeurs (Progress Bars) */}
+        {/* -------------------------------------Performance des Vendeurs (Progress Bars) ------------------------------
+        ------------------------------------------------------------------------------------------------------------------*/}
         <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm p-4 flex flex-col">
           <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
             <Users className="w-4 h-4 text-slate-400" /> Performance Vendeurs
@@ -172,7 +175,8 @@ export function ReportPage() {
                     </span>
                   </div>
                   
-                  {/* Barre de progression custom */}
+                  {/* ---------------------------------Barre de progression custom -----------------------------------------------
+                  -----------------------------------------------------------------------------------------------------------------*/}
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div 
                       className={cn("h-full rounded-full transition-all duration-1000", isObjectifAtteint ? "bg-emerald-500" : "bg-blue-500")}
