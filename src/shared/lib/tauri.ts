@@ -1,21 +1,20 @@
-import { resolve } from "node:dns";
-
 /**
  * Wrapper autour de `invoke` de Tauri.
  *
- * Pourquoi ce fichier existe :
+ * Rôle :
  * - Centralise l'appel au backend Rust en UN seul endroit.
- * - Permet de MOCKER facilement tant que le backend n'est pas prêt.
- * - Si demain on passe de Tauri à REST, on ne modifie QUE ce fichier.
+ * - Uniformise les erreurs : le frontend reçoit TOUJOURS un `Error` avec
+ *   un `.message` lisible, que ce soit en mode mock ou en mode réel.
  *
- * En production, ce fichier contiendra :
- *   import { invoke } from '@tauri-apps/api/core';
- *   return invoke<T>(command, args);
+ * Le backend Rust renvoie ses erreurs via `Err(String)` → Tauri rejette
+ * la promesse avec cette string brute. On la transforme ici en `Error`
+ * pour que `catch (err) { err.message }` fonctionne partout.
  */
 
-//Mode mock active tant que le backend rust n'est pas branche
-const USE_MOCK = true;
+// ✅ Backend Rust branché — le mock est désactivé.
+const USE_MOCK = false;
 
+// Conservé pour réactivation rapide en cas de besoin (débug, démo hors ligne).
 const Mock_USERS = [
     { id: '1', nom: 'Rakoto Jean', email: 'boss@vetpharma.mg', password: '123456', role: 'PHARMACIEN' as const },
     { id: '2', nom: 'Randria Sarah', email: 'vendeur@vetpharma.mg', password: '123456', role: 'VENDEUR' as const },
@@ -23,9 +22,8 @@ const Mock_USERS = [
 ];
 
 export async function callBackend<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-    //mode mock (dev)
+    // --- MODE MOCK (désactivé, gardé pour référence) ---
     if (USE_MOCK) {
-        //on simule un reseau de 500ms
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         switch (command) {
@@ -37,20 +35,24 @@ export async function callBackend<T>(command: string, args?: Record<string, unkn
                 if (!user) {
                     throw new Error('Email ou mot de passe incorrect');
                 }
-
-                //on ne renvoie pas de password au frontend
                 const { password: _, ...safeUser } = user;
                 return safeUser as T;
             }
             case 'logout':
                 return undefined as T;
-
             default:
                 throw new Error(`Commande mock inconnue : ${command}`);
         }
     }
 
-    // --- MODE RÉEL (production, une fois Tauri installé) ---
+    // --- MODE RÉEL (production) ---
     const { invoke } = await import('@tauri-apps/api/core');
-    return invoke<T>(command, args);
+    try {
+        return await invoke<T>(command, args);
+    } catch (err) {
+        // Le backend Rust renvoie des `String` (via `Err(e.to_string())`).
+        // On les normalise en `Error` pour une gestion uniforme côté React.
+        if (err instanceof Error) throw err;
+        throw new Error(typeof err === 'string' ? err : String(err));
+    }
 }

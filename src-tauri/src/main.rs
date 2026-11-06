@@ -1,6 +1,7 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+// Empêche l'ouverture d'une console Windows en build release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    spa_ngz_lib::run()
+    // ⚠️ Doit correspondre au [lib] name du Cargo.toml
+    vetpharma_lib::run();
 }

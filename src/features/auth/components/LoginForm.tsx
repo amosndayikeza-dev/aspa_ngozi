@@ -1,18 +1,10 @@
 // src/features/auth/components/LoginForm.tsx
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom'; // <-- 1. AJOUT IMPORT
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '@/shared/lib/cn';
 
-/**
- * Formulaire de connexion - Design "Desktop Pro"
- * 
- * Mise à jour de la palette :
- * - Le fond de la carte utilise un blanc translucide (glassmorphism clair).
- * - Les textes utilisent le gris foncé (gray-800) et le Teal profond (brand-dark).
- * - Les inputs ont un fond gris très clair avec un focus Teal.
- * - Le bouton utilise le Teal profond (brand-dark) avec un hover (brand-medium).
- */
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,6 +13,7 @@ export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { login } = useAuth();
+  const navigate = useNavigate(); // <-- 2. INITIALISATION
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -29,6 +22,10 @@ export function LoginForm() {
 
     try {
       await login({ email, password });
+      
+      // 3. LA REDIRECTION MAGIQUE
+      navigate('/dashboard'); 
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -37,13 +34,6 @@ export function LoginForm() {
   };
 
   return (
-    /* 
-      CARTE BLANCHE TRANSLUCIDE (Glassmorphism Clair)
-      - bg-white/90 : Blanc à 90% d'opacité pour laisser deviner l'image derrière.
-      - backdrop-blur-xl : Flou intense pour un effet "verre poli" haut de gamme.
-      - border-white/50 : Bordure blanche pour détacher la carte.
-      - text-gray-800 : Texte principal en gris très foncé (plus lisible que le blanc).
-    */
     <div className="bg-white/90 backdrop-blur-xl border border-white/50 rounded-3xl shadow-2xl p-8 md:p-10 text-gray-800">
       
       {/* --- Titre --- */}
@@ -65,7 +55,6 @@ export function LoginForm() {
             Adresse email
           </label>
           <div className="relative">
-            {/* L'icône prend la couleur Teal moyen */}
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-medium" />
             <input
               id="email"
@@ -79,7 +68,6 @@ export function LoginForm() {
                 'w-full h-11 rounded-xl bg-gray-50 pl-11 pr-4',
                 'text-sm text-gray-800 placeholder:text-gray-400',
                 'border border-gray-200',
-                // Focus avec la couleur Teal
                 'transition-all focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark'
               )}
             />
@@ -129,20 +117,20 @@ export function LoginForm() {
           </button>
         </div>
 
-        {/* Message d'erreur (Rouge de la palette) */}
+        {/* Message d'erreur */}
         {error && (
           <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
             <p className="text-xs text-vet-danger font-medium">{error}</p>
           </div>
         )}
 
-        {/* Bouton principal (Teal foncé) */}
+        {/* Bouton principal */}
         <button
           type="submit"
           disabled={isSubmitting}
           className={cn(
             'w-full h-11 rounded-xl font-semibold text-sm text-white mt-2',
-            'bg-brand-dark hover:bg-brand-medium', // Utilisation des nouvelles couleurs
+            'bg-brand-dark hover:bg-brand-medium',
             'transition-colors shadow-md',
             'disabled:opacity-60 disabled:cursor-not-allowed',
             'flex items-center justify-center gap-2'
@@ -160,7 +148,6 @@ export function LoginForm() {
             'Se connecter'
           )}
         </button>
-        
       </form>
     </div>
   );
