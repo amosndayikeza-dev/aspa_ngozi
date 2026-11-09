@@ -4,3 +4,5 @@
 //! à mesure des phases. Pour l'instant, ce module est vide.
 
 pub mod auth;
+pub mod clients; 
+pub mod produits;

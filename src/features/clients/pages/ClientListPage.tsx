@@ -82,18 +82,18 @@ export function ClientListPage() {
         await new Promise(resolve => setTimeout(resolve, 800));
 
         if (selectedClient) {
+            // Mise à jour d'un client existant
+            const updated = await clientApi.updateClient(selectedClient.id, data);
             //on met a jour la liste
             setClients(clients.map(c => c.id === selectedClient.id ? {
-                ...c, ...data
+                ...c, ...updated
             } : c));
+            toast.success("Client mis à jour avec succès");
         } else {
-            const newClient: Client = {
-                ...data,
-                id: `CLI-00${clients.length + 1}`,
-                dateInscription: new Date().toISOString().split('T')[0],
-                animaux: []
-            };
+            //mode creation d'un nouveau client
+            const newClient = await clientApi.createClient(data);
             setClients([newClient, ...clients]);
+            toast.success("Client ajouté avec succès");
         }
         setIsModalOpen(false);
     };

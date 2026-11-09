@@ -1,110 +1,68 @@
-import { resolve } from "node:dns";
-import type { Animal, Client } from "../types";
-import { data } from "react-router-dom";
+import { callBackend } from '../../../shared/lib/tauri';
+import type { Animal, Client } from '../types';
 
 /**
- * Base de donnee fictive (mock)
- * ces donnees simulent ce que le backend renverra plus tard
+ * Transforme les données brutes renvoyées par Rust (snake_case/camelCase partiel)
+ * vers l'interface `Client` attendue par React.
  */
-
-const MOCK_CLIENTS: Client[] = [
-    {
-        id: 'CLI-001',
-        nom: 'Rakoto',
-        prenom: 'Jean',
-        telephone: '034 12 345 67',
-        email: 'jean.rakoto@email.mg',
-        adresse: 'Lot II A 45, Antananarivo',
-        dateInscription: '2025-01-15',
-        animaux: [
-            { id: 'AN-001', nom: 'Rex', espece: 'Chien', race: 'Berger Allemand', dateNaissance: '2021-05-10', poidsKg: 32 },
-            { id: 'AN-002', nom: 'Minou', espece: 'Chat', race: 'Européen', dateNaissance: '2022-08-20', poidsKg: 4.5 }
-        ]
-    },
-    {
-        id: 'CLI-002',
-        nom: 'Randria',
-        prenom: 'Sarah',
-        telephone: '033 98 765 43',
-        email: 'sarah.randria@email.mg',
-        adresse: 'Villa Rose, Toamasina',
-        dateInscription: '2025-03-22',
-        animaux: [
-            { id: 'AN-003', nom: 'Bella', espece: 'Chien', race: 'Golden Retriever', dateNaissance: '2020-11-05', poidsKg: 28 }
-        ]
-    },
-    {
-        id: 'CLI-003',
-        nom: 'Élevage',
-        prenom: 'Kazoza',
-        telephone: '032 11 223 34',
-        email: 'contact@kazoza.mg',
-        adresse: 'Route Nationale 2, Moramanga',
-        dateInscription: '2024-10-05',
-        animaux: [
-            { id: 'AN-004', nom: 'Vache-01', espece: 'Bovin', race: 'Zébu', dateNaissance: '2023-01-15', poidsKg: 250 },
-            { id: 'AN-005', nom: 'Vache-02', espece: 'Bovin', race: 'Zébu', dateNaissance: '2023-02-10', poidsKg: 240 }
-        ]
-    }
-];
+const mapClient = (c: any): Client => ({
+  ...c,
+  // On mappe createdAt (Rust) vers dateInscription (React)
+  dateInscription: c.createdAt || new Date().toISOString(),
+  // On initialise un tableau vide pour les animaux (qui seront ajoutés en Phase 4)
+  animaux: c.animaux || [],
+});
 
 /**
- * API de gestion des clients
- * Actuellement branchee sur des donnees mockees.
+ * API de gestion des clients.
+ * Branchée sur le backend Rust via Tauri (IPC).
  */
-
 export const clientApi = {
 
-    /**
-     * recupere la liste de tout les clients
-     * simule un delais reseau de 600ms pour tester les etats de chragement (skeletons)
-     */
+  /**
+   * Récupère la liste de tous les clients depuis la base de données.
+   */
+  getClients: async (): Promise<Client[]> => {
+    const clients = await callBackend<any[]>('list_clients');
+    return clients.map(mapClient); // ✅ On applique le mapper
+  },
 
-    getClients: async (): Promise<Client[]> => {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve(MOCK_CLIENTS), 600);
-        });
-    },
+  /**
+   * Récupère un client spécifique par son ID.
+   */
+  getClientById: async (id: string): Promise<Client> => {
+    const c = await callBackend<any>('get_client', { id });
+    return mapClient(c); // ✅ On applique le mapper
+  },
 
-     /**
-     * Récupère un client spécifique par son ID.
-     * Simule un délai réseau pour tester le chargement.
-     */
-    getClientById: async (id: string): Promise<Client | undefined> => {
-        return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            const client = MOCK_CLIENTS.find((c) => c.id === id);
-            if (client) {
-            resolve(client);
-            } else {
-            reject(new Error("Client introuvable"));
-            }
-        }, 400);
-        });
-    },
+  /**
+   * Crée un nouveau client dans la base de données.
+   */
+  createClient: async (data: Omit<Client, 'id' | 'dateInscription' | 'animaux'>): Promise<Client> => {
+    const c = await callBackend<any>('create_client', { data });
+    return mapClient(c); // ✅ On applique le mapper
+  },
 
-    /**
-     * modification du client
-     */
+  /**
+   * Met à jour un client existant.
+   */
+  updateClient: async (id: string, data: Partial<Client>): Promise<Client> => {
+    const c = await callBackend<any>('update_client', { id, data });
+    return mapClient(c); // ✅ On applique le mapper
+  },
 
-    updateClient: async (id: string, data: Partial<Client>): Promise<Client> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Dans une vraie API, le backend ferait la mise à jour en base.
-        // Ici, on renvoie juste les données fusionnées.
-        resolve({ id, ...data } as Client); 
-      }, 500);
-    });
-    },
-    
-    /**
-     *  mise a jour de l'animal
-     */
-    updateAnimal: async (clientId: string, animalId: string, data: Partial<Animal>): Promise<Animal> => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-            resolve({ id: animalId, ...data } as Animal);
-            }, 500);
-        });
-    }
+  /**
+   * Supprime un client.
+   */
+  deleteClient: async (id: string): Promise<void> => {
+    return callBackend<void>('delete_client', { id });
+  },
+
+  /**
+   * Met à jour un animal existant.
+   * (Commande à créer en Phase 4)
+   */
+  updateAnimal: async (clientId: string, animalId: string, data: Partial<Animal>): Promise<Animal> => {
+    return callBackend<Animal>('update_animal', { clientId, animalId, data });
+  }
 };

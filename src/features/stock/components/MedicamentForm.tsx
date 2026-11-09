@@ -1,10 +1,12 @@
 // src/features/stock/components/MedicamentForm.tsx
-import { useState, useRef, type FormEvent, type ChangeEvent } from 'react';
+import { useState, type FormEvent, type ChangeEvent } from 'react';
 import { Package, Tag, DollarSign, AlertTriangle, Box, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { open } from '@tauri-apps/plugin-dialog';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 interface MedicamentFormProps {
   initialData?: any;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: any, imagePath?: string | null) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -17,45 +19,47 @@ export function MedicamentForm({ initialData, onSubmit, onCancel }: MedicamentFo
     prixAchat: initialData?.prixAchat || '',
     prixVente: initialData?.prixVente || '',
     seuilAlerte: initialData?.seuilAlerte || 10,
-    // Gestion de l'image (Base64)
-    imageUrl: initialData?.imageUrl || '',
     // Pour le lot initial
     lotNumero: '',
     lotQuantite: '',
     lotDatePeremption: '',
   });
 
+  // ✅ Nouveaux états pour gérer l'image avec Tauri
+  const [imagePath, setImagePath] = useState<string | null>(null);
+  // L'URL de prévisualisation (soit l'image existante, soit la nouvelle convertie)
+  const [previewUrl, setPreviewUrl] = useState<string>(initialData?.imageUrl || '');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Référence pour déclencher le clic sur l'input file caché
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // --- GESTION DE L'UPLOAD D'IMAGE ---
-  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // --- GESTION DE L'UPLOAD D'IMAGE AVEC TAURI ---
+  const handleSelectImage = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: 'Image', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
+      });
 
-    // Vérification de la taille (ex: max 2MB pour éviter de faire ramer l'UI)
-    if (file.size > 2 * 1024 * 1024) {
-      alert("L'image est trop lourde (max 2Mo)");
-      return;
+      if (selected) {
+        // On stocke le chemin brut (ex: C:\Images\photo.jpg) pour le backend
+        setImagePath(selected as string);
+        // On convertit le chemin pour que React puisse l'afficher dans la balise <img>
+        setPreviewUrl(convertFileSrc(selected as string));
+      }
+    } catch (error) {
+      console.error("Erreur lors de la sélection de l'image", error);
     }
-
-    // Utilisation de FileReader pour convertir le fichier en Base64
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData((prev) => ({ ...prev, imageUrl: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
-    setFormData((prev) => ({ ...prev, imageUrl: '' }));
-    if (fileInputRef.current) fileInputRef.current.value = ''; // Reset l'input file
+    setImagePath(null);
+    setPreviewUrl('');
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -78,7 +82,8 @@ export function MedicamentForm({ initialData, onSubmit, onCancel }: MedicamentFo
     };
 
     try {
-      await onSubmit(payload);
+      // ✅ On passe imagePath en deuxième paramètre
+      await onSubmit(payload, imagePath);
     } finally {
       setIsSubmitting(false);
     }
@@ -91,9 +96,9 @@ export function MedicamentForm({ initialData, onSubmit, onCancel }: MedicamentFo
       <div className="flex gap-3.5 items-center p-3 bg-slate-50/70 border border-slate-200/80 rounded-xl">
         {/* Prévisualisation */}
         <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs relative group">
-          {formData.imageUrl ? (
+          {previewUrl ? (
             <>
-              <img src={formData.imageUrl} alt="Aperçu" className="w-full h-full object-cover" />
+              <img src={previewUrl} alt="Aperçu" className="w-full h-full object-cover" />
               <button
                 type="button"
                 onClick={handleRemoveImage}
@@ -111,22 +116,15 @@ export function MedicamentForm({ initialData, onSubmit, onCancel }: MedicamentFo
         {/* Zone d'upload */}
         <div className="flex-1">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Photo du médicament</p>
-          <input
-            type="file"
-            accept="image/png, image/jpeg, image/webp"
-            ref={fileInputRef}
-            onChange={handleImageUpload}
-            className="hidden"
-          />
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleSelectImage}
             className="h-7 px-2.5 bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-800 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
           >
             <Upload className="w-3.5 h-3.5 text-slate-500" />
-            <span>Choisir une photo</span>
+            <span>Parcourir...</span>
           </button>
-          <p className="text-[10px] text-slate-400 mt-1">PNG, JPG ou WEBP (max 2 Mo)</p>
+          <p className="text-[10px] text-slate-400 mt-1">Sélectionnez un fichier sur votre ordinateur</p>
         </div>
       </div>
 

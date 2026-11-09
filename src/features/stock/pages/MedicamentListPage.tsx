@@ -1,6 +1,6 @@
 // src/features/stock/pages/MedicamentListPage.tsx
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Package, AlertTriangle, TrendingUp, Eye,Pill } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, AlertTriangle, TrendingUp, Eye, Pill, ClipboardList, Truck } from 'lucide-react';
 import { medicamentApi } from '../api/medicamentApi';
 import type { Medicament } from '../types';
 import { DataTable, type Column } from '@/shared/ui/DataTable';
@@ -10,18 +10,14 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { MedicamentForm } from '../components/MedicamentForm';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { ClipboardList,Truck } from 'lucide-react';
-
 
 export function MedicamentListPage() {
   const [medicaments, setMedicaments] = useState<Medicament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // États Modales
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMedicament, setSelectedMedicament] = useState<Medicament | null>(null);
-  
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [medicamentToDelete, setMedicamentToDelete] = useState<Medicament | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -34,6 +30,7 @@ export function MedicamentListPage() {
         setMedicaments(data);
       } catch (error) {
         console.error(error);
+        toast.error("Erreur lors du chargement des médicaments");
       } finally {
         setIsLoading(false);
       }
@@ -43,9 +40,7 @@ export function MedicamentListPage() {
 
   // --- KPIs ---
   const totalReferences = medicaments.length;
-  const stockTotal = medicaments.reduce((acc, med) => 
-    acc + med.lots.reduce((sum, lot) => sum + lot.quantite, 0), 0
-  );
+  const stockTotal = medicaments.reduce((acc, med) => acc + med.lots.reduce((sum, lot) => sum + lot.quantite, 0), 0);
   const alertesCount = medicaments.filter(med => {
     const totalQte = med.lots.reduce((sum, lot) => sum + lot.quantite, 0);
     const hasExpired = med.lots.some(lot => new Date(lot.datePeremption) < new Date());
@@ -61,32 +56,29 @@ export function MedicamentListPage() {
   // --- ACTIONS ---
   const handleOpenCreate = () => { setSelectedMedicament(null); setIsModalOpen(true); };
   const handleOpenEdit = (med: Medicament) => { setSelectedMedicament(med); setIsModalOpen(true); };
+  const handleOpenView = (med: Medicament) => { setSelectedMedicament(med); setIsViewModalOpen(true); };
   
-    // ouvrir la vue detaillee
-    const handleOpenView = (med: Medicament) => {
-        setSelectedMedicament(med);
-        setIsViewModalOpen(true);
-    }
   const handleOpenDelete = (med: Medicament, e: React.MouseEvent) => {
     e.stopPropagation();
     setMedicamentToDelete(med);
     setIsDeleteModalOpen(true);
   };
 
-  const handleSubmit = async (data: any) => {
+  // ✅ Modifié pour accepter l'imagePath envoyé par le MedicamentForm
+  const handleSubmit = async (data: any, imagePath?: string | null) => {
     try {
       if (selectedMedicament) {
-        await medicamentApi.updateMedicament(selectedMedicament.id, data);
-        setMedicaments(medicaments.map(m => m.id === selectedMedicament.id ? { ...m, ...data } : m));
+        const updated = await medicamentApi.updateMedicament(selectedMedicament.id, data, imagePath);
+        setMedicaments(medicaments.map(m => m.id === selectedMedicament.id ? updated : m));
         toast.success("Médicament mis à jour");
       } else {
-        const newMed = await medicamentApi.createMedicament(data);
+        const newMed = await medicamentApi.createMedicament(data, imagePath);
         setMedicaments([newMed, ...medicaments]);
         toast.success("Médicament ajouté au catalogue");
       }
       setIsModalOpen(false);
-    } catch (e) {
-      toast.error("Une erreur est survenue");
+    } catch (e: any) {
+      toast.error(e.message || "Une erreur est survenue");
     }
   };
 
@@ -98,14 +90,13 @@ export function MedicamentListPage() {
       setMedicaments(prev => prev.filter(m => m.id !== medicamentToDelete.id));
       toast.success("Médicament supprimé");
       setIsDeleteModalOpen(false);
-    } catch (e) {
-      toast.error("Erreur lors de la suppression");
+    } catch (e: any) {
+      toast.error(e.message || "Erreur lors de la suppression");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // --- COLONNES ---
   const columns: Column<Medicament>[] = [
     {
       header: 'Médicament',
@@ -181,7 +172,6 @@ export function MedicamentListPage() {
 
   return (
     <div className="space-y-4 max-w-[1600px] mx-auto pb-10">
-
       {/* ---- EN-TÊTE ---- */}
       <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
@@ -189,7 +179,6 @@ export function MedicamentListPage() {
           <p className="text-[11px] text-slate-500 mt-0.5">Catalogue de références · dates de péremption · alertes seuil</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Barre de recherche */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
@@ -200,57 +189,36 @@ export function MedicamentListPage() {
               className="w-52 h-8 pl-8 pr-3 rounded-lg bg-white border border-slate-200/90 text-xs text-slate-800 placeholder:text-slate-400 shadow-[0_1px_2px_rgba(0,0,0,0.04)] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/60 transition-all"
             />
           </div>
-          <Link
-            to="/stock/inventaire"
-            className="h-8 px-3 bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-          >
-            <ClipboardList className="w-3.5 h-3.5" />
-            Inventaire
+          <Link to="/stock/inventaire" className="h-8 px-3 bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <ClipboardList className="w-3.5 h-3.5" /> Inventaire
           </Link>
-          <Link
-            to="/stock/achats/nouveau"
-            className="h-8 px-3 bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-          >
-            <Truck className="w-3.5 h-3.5" />
-            Commander
+          <Link to="/stock/achats/nouveau" className="h-8 px-3 bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <Truck className="w-3.5 h-3.5" /> Commander
           </Link>
-          <button
-            onClick={handleOpenCreate}
-            className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Nouveau Médicament
+          <button onClick={handleOpenCreate} className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm">
+            <Plus className="w-3.5 h-3.5" /> Nouveau Médicament
           </button>
         </div>
       </div>
 
       {/* ---- KPIs compact ---- */}
       <div className="grid grid-cols-3 gap-3">
-        {/* Références */}
         <div className="bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-3 flex items-center gap-3">
-          <div className="p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600 shrink-0">
-            <Package className="w-4 h-4" />
-          </div>
+          <div className="p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600 shrink-0"><Package className="w-4 h-4" /></div>
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Références</p>
             <p className="text-lg font-black text-slate-900 font-mono tabular-nums leading-tight">{totalReferences}</p>
           </div>
         </div>
-        {/* Unités en stock */}
         <div className="bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-3 flex items-center gap-3">
-          <div className="p-2 bg-slate-100 border border-slate-200/70 rounded-lg text-slate-600 shrink-0">
-            <TrendingUp className="w-4 h-4" />
-          </div>
+          <div className="p-2 bg-slate-100 border border-slate-200/70 rounded-lg text-slate-600 shrink-0"><TrendingUp className="w-4 h-4" /></div>
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Unités en stock</p>
             <p className="text-lg font-black text-slate-900 font-mono tabular-nums leading-tight">{stockTotal}</p>
           </div>
         </div>
-        {/* Alertes */}
         <div className={`bg-white rounded-xl border shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-3 flex items-center gap-3 ${alertesCount > 0 ? 'border-rose-200/80 bg-rose-50/30' : 'border-slate-200/90'}`}>
-          <div className={`p-2 rounded-lg shrink-0 ${alertesCount > 0 ? 'bg-rose-50 border border-rose-200/70 text-rose-600' : 'bg-slate-100 border border-slate-200/70 text-slate-400'}`}>
-            <AlertTriangle className="w-4 h-4" />
-          </div>
+          <div className={`p-2 rounded-lg shrink-0 ${alertesCount > 0 ? 'bg-rose-50 border border-rose-200/70 text-rose-600' : 'bg-slate-100 border border-slate-200/70 text-slate-400'}`}><AlertTriangle className="w-4 h-4" /></div>
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Alertes</p>
             <p className={`text-lg font-black font-mono tabular-nums leading-tight ${alertesCount > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{alertesCount}</p>
@@ -259,48 +227,18 @@ export function MedicamentListPage() {
       </div>
 
       {/* TABLEAU */}
-      <DataTable<Medicament>
-        data={filteredMedicaments}
-        Columns={columns}
-        isLoading={isLoading}
-        keyExtractor={(med) => med.id}
-      />
+      <DataTable<Medicament> data={filteredMedicaments} Columns={columns} isLoading={isLoading} keyExtractor={(med) => med.id} />
 
       {/* MODALES */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={selectedMedicament ? "Modifier le médicament" : "Ajouter un médicament"}
-        description={selectedMedicament ? "Mettez à jour les informations." : "Créez une nouvelle référence dans votre catalogue."}
-        maxWidth="lg"
-      >
-        <MedicamentForm 
-          initialData={selectedMedicament}
-          onSubmit={handleSubmit}
-          onCancel={() => setIsModalOpen(false)}
-        />
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedMedicament ? "Modifier le médicament" : "Ajouter un médicament"} description={selectedMedicament ? "Mettez à jour les informations." : "Créez une nouvelle référence dans votre catalogue."} maxWidth="lg">
+        <MedicamentForm initialData={selectedMedicament} onSubmit={handleSubmit} onCancel={() => setIsModalOpen(false)} />
       </Modal>
 
-      <ConfirmDialog
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Supprimer ce médicament ?"
-        description={`Êtes-vous sûr de vouloir supprimer ${medicamentToDelete?.nom} ? Tous les lots associés seront définitivement perdus.`}
-        isLoading={isDeleting}
-      />
+      <ConfirmDialog isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleConfirmDelete} title="Supprimer ce médicament ?" description={`Êtes-vous sûr de vouloir supprimer ${medicamentToDelete?.nom} ? Tous les lots associés seront définitivement perdus.`} isLoading={isDeleting} />
 
-      {/* ----- le modale de visualisation------ */}
-      <Modal
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-        title="Fiche du médicament"
-        maxWidth="md"
-      >
+      <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Fiche du médicament" maxWidth="md">
         {selectedMedicament && (
           <div className="space-y-4">
-            
-            {/* En-tête avec image */}
             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
               <div className="w-16 h-16 rounded-xl bg-white border border-gray-200 flex items-center justify-center overflow-hidden shadow-sm shrink-0">
                 {selectedMedicament.imageUrl ? (
@@ -316,7 +254,6 @@ export function MedicamentListPage() {
               </div>
             </div>
 
-            {/* Grille d'informations */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
                 <p className="text-[10px] font-bold text-text-muted uppercase mb-1">Prix d'achat</p>
@@ -332,13 +269,10 @@ export function MedicamentListPage() {
               </div>
               <div className="p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
                 <p className="text-[10px] font-bold text-text-muted uppercase mb-1">Stock Total</p>
-                <p className="text-sm font-bold text-text-main">
-                  {selectedMedicament.lots.reduce((sum, lot) => sum + lot.quantite, 0)} unités
-                </p>
+                <p className="text-sm font-bold text-text-main">{selectedMedicament.lots.reduce((sum, lot) => sum + lot.quantite, 0)} unités</p>
               </div>
             </div>
 
-            {/* Détail des lots */}
             <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm mt-4">
               <div className="bg-gray-50 px-4 py-2 border-b border-gray-100">
                 <h4 className="text-xs font-bold text-text-main">Lots en stock</h4>
@@ -347,15 +281,9 @@ export function MedicamentListPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="text-[10px] text-text-muted uppercase border-b border-gray-50">
-                      <th className="px-4 py-2 font-semibold">
-                        Lot
-                      </th>
-                      <th className="px-4 py-2 font-semibold">
-                        Quantité
-                      </th>
-                      <th className="px-4 py-2 font-semibold">
-                        Péremption
-                      </th>
+                      <th className="px-4 py-2 font-semibold">Lot</th>
+                      <th className="px-4 py-2 font-semibold">Quantité</th>
+                      <th className="px-4 py-2 font-semibold">Péremption</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -372,17 +300,11 @@ export function MedicamentListPage() {
             </div>
 
             <div className="pt-2 flex justify-end">
-              <button 
-                onClick={() => setIsViewModalOpen(false)}
-                className="h-9 px-4 bg-brand-dark hover:bg-brand-medium text-white rounded-xl text-xs font-semibold transition-colors"
-              >
-                Fermer
-              </button>
+              <button onClick={() => setIsViewModalOpen(false)} className="h-9 px-4 bg-brand-dark hover:bg-brand-medium text-white rounded-xl text-xs font-semibold transition-colors">Fermer</button>
             </div>
           </div>
         )}
       </Modal>
-
     </div>
   );
 }

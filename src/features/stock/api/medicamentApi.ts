@@ -1,103 +1,79 @@
-import { resolve, Resolver } from "node:dns";
+// ✅ 1. On importe convertFileSrc depuis Tauri
+import { convertFileSrc } from '@tauri-apps/api/core';
+// ✅ 2. On importe callBackend depuis TON wrapper (vérifie que le chemin relatif est le bon)
+import { callBackend } from '../../../shared/lib/tauri';
 import type { Medicament } from "../types";
 
-/**
- * Base des donnees fictives
- */
-const MOCK_MEDICAMENTS: Medicament[] = [
-    {
-        id: 'MED-001',
-        nom: 'Amoxicilline 500mg',
-        dci: 'Amoxicilline',
-        categorie: 'Antibiotique',
-        forme: 'Comprime',
-        prixAchat: 1500,
-        prixVente: 2500,
-        seuilAlerte: 10,
-        imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=200&q=80',
-        lots: [
-            {
-                id: 'LOT-001',
-                numeroLot: 'AMX-2026-A',
-                quantite: 45,
-                datePeremption: '2026-12-31'
-            },
-            {
-                id: 'LOT-002',
-                numeroLot: 'AMX-2025-B',
-                quantite: 5,
-                datePeremption: '2025-10-15'
-            }
-        ]
-    },
-    {
-        id: 'MED-002',
-        nom: 'Ivermectine 1%',
-        dci: 'Ivermectine',
-        categorie: 'Antiparasitaire',
-        forme: 'Injection',
-        prixAchat: 8000,
-        prixVente: 12000,
-        seuilAlerte: 5,
-        imageUrl: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=200&q=80',
-        lots: [
-            {
-                id: 'LOT-003',
-                numeroLot: 'IVM-2027-X',
-                quantite: 2,
-                datePeremption: '2027-05-20'
-            }
-        ]
-    },
-    {
-        id: 'MED-003',
-        nom: 'Vaccin Newcastle',
-        dci: 'Vaccin NDV',
-        categorie: 'Vaccin',
-        forme: 'Injection',
-        prixAchat: 5000,
-        prixVente: 8500,
-        seuilAlerte: 20,
-        imageUrl: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=200&q=80',
-        lots: [
-            {
-                id: 'LOT-004',
-                numeroLot: 'VAC-2024-Z',
-                quantite: 50,
-                datePeremption: '2024-01-01'
-            }
-        ]
-    }
-];
+const mapProduitToMedicament = (p: any): Medicament => ({
+    id: p.id,
+    nom: p.nom,
+    dci: p.dci || '',
+    forme: p.forme || '',
+    prixAchat: p.prixAchat,
+    prixVente: p.prixVente,
+    seuilAlerte: p.seuilAlerte,
+    // ✅ 3. On utilise 'Autre' au lieu de 'Non classé' pour respecter l'interface
+    categorie: (p.categorie as any) || 'Autre', 
+    imageUrl: p.imagePath ? convertFileSrc(p.imagePath) : 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=200&q=80',
+    lots: (p.stock > 0 || p.datePeremption) ? [{
+        id: `LOT-${p.id}`,
+        numeroLot: `LOT-${p.id}`,
+        quantite: p.stock,
+        datePeremption: p.datePeremption || '2099-12-31'
+    }] : []
+});
+
+const extractStockData = (data: any) => {
+    const stock = data.lots?.reduce((sum: number, lot: any) => sum + lot.quantite, 0) || 0;
+    const datePeremption = data.lots?.[0]?.datePeremption || null;
+    return { stock, datePeremption };
+};
 
 export const medicamentApi = {
-
-    /**
-     * recupere tout les medicaments
-     */
-
     getMedicaments: async (): Promise<Medicament[]> => {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve(MOCK_MEDICAMENTS), 500);
-        });
+        const produits = await callBackend<any[]>('list_produits');
+        return produits.map(mapProduitToMedicament);
     },
 
-    //enregistrer un medicament
-    createMedicament: async (data: any): Promise<Medicament> => {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve({ ...data, id: `MED-${Math.floor(Math.random() * 10000)}` }), 500);
-        });
+    createMedicament: async (data: any, imagePath?: string | null): Promise<Medicament> => {
+        const { stock, datePeremption } = extractStockData(data);
+        
+        const rustPayload = {
+            nom: data.nom,
+            dci: data.dci || null,
+            forme: data.forme || null,
+            prixAchat: data.prixAchat,
+            prixVente: data.prixVente,
+            stock: stock,
+            seuilAlerte: data.seuilAlerte,
+            datePeremption: datePeremption,
+            imagePath: imagePath || null
+        };
+
+        const newProduit = await callBackend<any>('create_produit', { data: rustPayload });
+        return mapProduitToMedicament(newProduit);
     },
 
-    //modifier un medicament
-    updateMedicament: async (id: string, data: any): Promise<Medicament> => {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve({ id, ...data }), 500);
-        });
+    updateMedicament: async (id: string, data: any, imagePath?: string | null): Promise<Medicament> => {
+        const { stock, datePeremption } = extractStockData(data);
+
+        const rustPayload = {
+            nom: data.nom,
+            dci: data.dci || null,
+            forme: data.forme || null,
+            prixAchat: data.prixAchat,
+            prixVente: data.prixVente,
+            stock: stock,
+            seuilAlerte: data.seuilAlerte,
+            datePeremption: datePeremption,
+            imagePath: imagePath || data.imagePath || null
+        };
+
+        const updatedProduit = await callBackend<any>('update_produit', { id, data: rustPayload });
+        return mapProduitToMedicament(updatedProduit);
     },
 
-    //supprimer un medicament
     deleteMedicament: async (id: string): Promise<void> => {
-        return new Promise((resolve) => setTimeout(() => resolve(), 500));
+        return callBackend<void>('delete_produit', { id });
     }
 };
