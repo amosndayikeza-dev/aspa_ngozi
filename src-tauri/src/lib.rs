@@ -54,6 +54,13 @@ pub fn run() {
             commands::animaux::create_animal,
             commands::animaux::update_animal,
             commands::animaux::delete_animal,
+
+            //phase 5 : fournisseurs et achats
+            commands::fournisseurs::list_fournisseurs,
+            commands::fournisseurs::create_fournisseur,
+            commands::fournisseurs::update_fournisseur,
+            commands::fournisseurs::delete_fournisseur,
+            commands::achats::create_achat,
         ])
         .run(tauri::generate_context!())
         .expect("Erreur fatale au lancement de Tauri");

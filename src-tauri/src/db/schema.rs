@@ -62,6 +62,37 @@ pub fn create_tables(conn: &Connection) -> Result<(), AppError> {
             FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE
         );
 
+                -- Phase 5 : Fournisseurs
+        CREATE TABLE IF NOT EXISTS fournisseurs (
+            id            TEXT PRIMARY KEY NOT NULL,
+            nom           TEXT NOT NULL,
+            contact       TEXT,
+            telephone     TEXT,
+            email         TEXT,
+            created_at    TEXT NOT NULL
+        );
+
+        -- Phase 5 : Achats (Bons de commande)
+        CREATE TABLE IF NOT EXISTS achats (
+            id             TEXT PRIMARY KEY NOT NULL,
+            fournisseur_id TEXT NOT NULL,
+            total          REAL NOT NULL,
+            date_achat     TEXT NOT NULL,
+            created_at     TEXT NOT NULL,
+            FOREIGN KEY(fournisseur_id) REFERENCES fournisseurs(id)
+        );
+
+        -- Phase 5 : Lignes d'achat
+        CREATE TABLE IF NOT EXISTS achats_lignes (
+            id            TEXT PRIMARY KEY NOT NULL,
+            achat_id      TEXT NOT NULL,
+            produit_id    TEXT NOT NULL,
+            quantite      INTEGER NOT NULL,
+            prix_unitaire REAL NOT NULL,
+            FOREIGN KEY(achat_id) REFERENCES achats(id) ON DELETE CASCADE,
+            FOREIGN KEY(produit_id) REFERENCES produits(id)
+        );
+
         CREATE INDEX IF NOT EXISTS idx_animaux_client ON animaux(client_id);
 
         CREATE INDEX IF NOT EXISTS idx_clients_nom ON clients(nom);
@@ -176,6 +207,28 @@ pub fn seed_default_animaux(conn: &Connection) -> Result<(), AppError> {
             "INSERT INTO animaux (id, client_id, nom, espece, race, sexe, date_naissance, poids_kg, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![id, client_id, nom, espece, race, sexe, ddn, poids, now],
+        )?;
+    }
+    Ok(())
+}
+
+/// Insère 2 fournisseurs de démonstration si la table est vide.
+pub fn seed_default_fournisseurs(conn: &Connection) -> Result<(), AppError> {
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM fournisseurs", [], |row| row.get(0))?;
+    if count > 0 { return Ok(()); }
+
+    let now = chrono::Utc::now().to_rfc3339();
+    
+    let defaults: [(&str, &str, &str, &str, &str); 2] = [
+        ("F-01", "Centravet", "M. Rabe", "034 00 000 01", "contact@centravet.mg"),
+        ("F-02", "PharmaVet", "Mme Rasoa", "033 00 000 02", "contact@pharmavet.mg"),
+    ];
+
+    for (id, nom, contact, tel, email) in defaults {
+        conn.execute(
+            "INSERT INTO fournisseurs (id, nom, contact, telephone, email, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![id, nom, contact, tel, email, now],
         )?;
     }
     Ok(())

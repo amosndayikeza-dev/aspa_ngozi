@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Plus, Minus, Truck, CheckCircle2, ShoppingBag, Building2, Package, Receipt, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Search, Plus, Minus, Truck, CheckCircle2, ShoppingBag, Building2, Receipt, ArrowRight, Pill } from 'lucide-react';
 import { medicamentApi } from '../api/medicamentApi';
 import { achatApi } from '../api/achatApi';
 import type { Medicament, LigneAchat, Fournisseur } from '../types';
@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 import { cn } from '@/shared/lib/cn';
 
 export function NouvelAchatPage() {
-    
   const navigate = useNavigate();
   const [medicaments, setMedicaments] = useState<Medicament[]>([]);
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
@@ -97,7 +96,6 @@ export function NouvelAchatPage() {
             </p>
           </div>
           
-          {/* Indicateur d'étape minimaliste */}
           <div className="flex items-center gap-2 text-[10px] font-medium">
             <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -115,14 +113,15 @@ export function NouvelAchatPage() {
         {/* === COLONNE GAUCHE (Catalogue) === */}
         <div className="lg:col-span-7 flex flex-col gap-4 overflow-hidden">
           
-          {/* Carte Fournisseur (Design mis en avant) */}
+          {/* Carte Fournisseur */}
           <div className="bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-3">
             <div className="flex items-center gap-2 mb-2.5">
               <Building2 className="w-3.5 h-3.5 text-slate-500" />
               <h2 className="text-xs font-bold text-slate-900">Fournisseur</h2>
             </div>
             
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {/* ✅ Ajout de flex-nowrap pour forcer le défilement horizontal sans retour à la ligne */}
+            <div className="flex flex-nowrap gap-2 overflow-x-auto pb-2 no-scrollbar">
               {fournisseurs.map(f => (
                 <button
                   key={f.id}
@@ -153,7 +152,6 @@ export function NouvelAchatPage() {
 
           {/* Catalogue des produits */}
           <div className="bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col flex-1 overflow-hidden">
-            {/* Barre de recherche */}
             <div className="p-3 border-b border-slate-100">
               <div className="relative">
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -168,22 +166,32 @@ export function NouvelAchatPage() {
             </div>
 
             {/* Grille produits (Style Bento) */}
-            <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 gap-2.5">
+            <div className="flex-1 overflow-y-auto  grid grid-cols-2 md:grid-cols-3 gap-2">
               {filteredMeds.map(med => (
                 <button
                   key={med.id}
                   onClick={() => handleAddMedicament(med)}
                   className="p-3 bg-white border border-slate-200/80 rounded-xl hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-100 transition-all text-left flex flex-col gap-1.5 group relative overflow-hidden"
                 >
-                  {/* Indicateur de stock */}
                   <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   
-                  <span className="text-xs font-semibold text-slate-900 line-clamp-1 group-hover:text-emerald-700 transition-colors pr-3">
-                    {med.nom}
-                  </span>
+                  {/* ✅ Ajout de l'image du médicament */}
+                  <div className="flex items-center gap-2 mb-1 pr-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                      {med.imageUrl ? (
+                        <img src={med.imageUrl} alt={med.nom} className="w-full h-full object-cover" />
+                      ) : (
+                        <Pill className="w-4 h-4 text-slate-300" />
+                      )}
+                    </div>
+                    <span className="text-xs font-semibold text-slate-900 line-clamp-1 group-hover:text-emerald-700 transition-colors">
+                      {med.nom}
+                    </span>
+                  </div>
+
                   <span className="text-[10px] text-slate-400 font-mono">Achat: {med.prixAchat.toLocaleString('fr-FR')} FBU</span>
                   
-                  <div className="mt-auto pt-2 border-t border-slate-100 flex justify-between items-center w-full">
+                  <div className="mt-auto pt-1 border-t border-slate-100 flex justify-between items-center w-full">
                     <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Ajouter</span>
                     <div className="p-1 bg-slate-50 group-hover:bg-emerald-600 group-hover:text-white rounded-md transition-colors text-slate-500">
                       <Plus className="w-3 h-3" />
@@ -195,10 +203,8 @@ export function NouvelAchatPage() {
           </div>
         </div>
 
-        {/* === COLONNE DROITE (Bon de commande / Facture) === */}
+        {/* === COLONNE DROITE (Bon de commande) === */}
         <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col overflow-hidden">
-          
-          {/* En-tête du bon de commande */}
           <div className="p-3 border-b border-slate-100 bg-slate-50/50">
             <div className="flex items-center gap-2 mb-1">
               <Receipt className="w-4 h-4 text-slate-600" />
@@ -209,7 +215,6 @@ export function NouvelAchatPage() {
             </p>
           </div>
 
-          {/* Lignes de commande (Style facture) */}
           <div className="flex-1 overflow-y-auto p-3 space-y-1.5 bg-slate-50/30">
             {lignes.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60 py-10">
@@ -230,7 +235,6 @@ export function NouvelAchatPage() {
                     <p className="text-[10px] text-slate-400 font-mono">{l.prixAchatUnitaire.toLocaleString('fr-FR')} FBU / u</p>
                   </div>
                   
-                  {/* Stepper quantité */}
                   <div className="flex items-center gap-0.5 bg-slate-50 border border-slate-200/80 rounded-lg p-0.5 mx-2 shrink-0">
                     <button onClick={() => handleUpdateQte(l.medicamentId, -1)} className="p-1 hover:bg-white hover:shadow-sm rounded text-slate-600 transition-all">
                       <Minus className="w-3 h-3" />
@@ -249,13 +253,8 @@ export function NouvelAchatPage() {
             )}
           </div>
 
-          {/* Pied du bon de commande (Total + Validation) */}
           <div className="p-3 border-t border-slate-100 bg-white">
-            
-            {/* Ligne de séparation pointillée style facture */}
             <div className="border-t border-dashed border-slate-200 my-2" />
-
-            {/* Total */}
             <div className="flex justify-between items-center mb-3">
               <span className="text-[11px] font-medium text-slate-500">Total Commande</span>
               <span className="text-lg font-black text-emerald-700 font-mono tabular-nums">
@@ -263,7 +262,6 @@ export function NouvelAchatPage() {
               </span>
             </div>
 
-            {/* Bouton de validation */}
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || lignes.length === 0}

@@ -3,7 +3,9 @@
 //! Les modules (`auth`, `produits`, `clients`, …) seront ajoutés au fur et
 //! à mesure des phases. Pour l'instant, ce module est vide.
 
+pub mod achats;
 pub mod animaux;
 pub mod auth;
-pub mod clients; 
+pub mod clients;
+pub mod fournisseurs; 
 pub mod produits;

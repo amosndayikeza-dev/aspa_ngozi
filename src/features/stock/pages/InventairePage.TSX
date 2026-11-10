@@ -1,9 +1,8 @@
-// src/features/stock/pages/InventairePage.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Save, AlertTriangle, CheckCircle2, 
-  Search, ClipboardList, TrendingDown, TrendingUp, Package
+  Search, ClipboardList, TrendingDown, Package
 } from 'lucide-react';
 import { medicamentApi } from '../api/medicamentApi';
 import type { Medicament } from '../types';
@@ -35,26 +34,53 @@ export function InventairePage() {
     setStockReel(prev => ({ ...prev, [medId]: numValue }));
   };
 
+  // ✅ VRAIE SAUVEGARDE DANS SQLITE
   const handleSaveInventaire = async () => {
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast.success("Inventaire validé. Les écarts ont été enregistrés.");
-    setIsSaving(false);
-    navigate('/stock');
+    try {
+      // On parcourt tous les médicaments qui ont un écart
+      const promises = medicaments.map(async (med) => {
+        const theorique = med.lots.reduce((sum, l) => sum + l.quantite, 0);
+        const reel = stockReel[med.id] ?? theorique;
+        
+        if (reel !== theorique) {
+          // On doit envoyer le payload complet attendu par le backend
+          const rustPayload = {
+            nom: med.nom,
+            dci: med.dci,
+            forme: med.forme,
+            prixAchat: med.prixAchat,
+            prixVente: med.prixVente,
+            stock: reel, // 👈 Nouveau stock ajusté
+            seuilAlerte: med.seuilAlerte,
+            datePeremption: med.lots[0]?.datePeremption || null,
+            imagePath: med.imageUrl || null
+          };
+          return medicamentApi.updateMedicament(med.id, rustPayload);
+        }
+        return Promise.resolve();
+      });
+
+      await Promise.all(promises);
+      
+      toast.success("Inventaire validé. Les écarts ont été enregistrés en base.");
+      navigate('/stock');
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de la validation de l'inventaire");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // --- FILTRAGE ---
   const filteredMedicaments = medicaments.filter(med => 
     med.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
     med.dci.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // --- CALCUL DES KPIs ---
   const totalProduits = medicaments.length;
-  
   let produitsAvecEcart = 0;
   let totalManquant = 0;
-  let totalSurplus = 0;
 
   medicaments.forEach(med => {
     const theorique = med.lots.reduce((sum, l) => sum + l.quantite, 0);
@@ -63,15 +89,13 @@ export function InventairePage() {
     
     if (ecart !== 0) produitsAvecEcart++;
     if (ecart < 0) totalManquant += Math.abs(ecart);
-    if (ecart > 0) totalSurplus += ecart;
   });
 
   if (isLoading) return <div className="p-10 text-sm text-text-muted animate-pulse">Chargement de l'inventaire...</div>;
 
   return (
     <div className="h-[calc(100vh-5.5rem)] max-w-[1400px] mx-auto flex flex-col gap-4">
-      
-      {/* --- 1. EN-TÊTE --- */}
+      {/* ... (Le reste de l'interface ne change pas, tu peux garder ton code tel quel) ... */}
       <div className="flex justify-between items-end shrink-0">
         <div>
           <button 
@@ -98,7 +122,6 @@ export function InventairePage() {
         </button>
       </div>
 
-      {/* --- 2. CARTES KPI --- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 shrink-0">
         <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-sm flex items-center gap-3">
           <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><Package className="w-4 h-4" /></div>
@@ -125,10 +148,7 @@ export function InventairePage() {
         </div>
       </div>
 
-      {/* --- 3. ZONE PRINCIPALE (Recherche + Tableau) --- */}
       <div className="bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col flex-1 overflow-hidden">
-        
-        {/* Barre de recherche */}
         <div className="p-3 border-b border-slate-100 bg-slate-50/50">
           <div className="relative max-w-md">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -142,10 +162,8 @@ export function InventairePage() {
           </div>
         </div>
 
-        {/* Tableau (Scrollable) */}
         <div className="flex-1 overflow-auto">
           <table className="w-full text-left border-collapse relative">
-            {/* En-tête Sticky */}
             <thead className="sticky top-0 bg-slate-50 border-b border-slate-200/80 z-10 shadow-sm">
               <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                 <th className="px-4 py-2.5">Médicament</th>
@@ -165,20 +183,17 @@ export function InventairePage() {
 
                 return (
                   <tr key={med.id} className="hover:bg-slate-50/70 transition-colors group">
-                    {/* Nom du produit */}
                     <td className="px-4 py-2.5">
                       <p className="text-xs font-semibold text-slate-900">{med.nom}</p>
                       <p className="text-[10px] text-slate-400 font-mono">{med.dci}</p>
                     </td>
 
-                    {/* Stock théorique */}
                     <td className="px-4 py-2.5 text-center">
                       <span className="text-xs font-bold font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
                         {theorique}
                       </span>
                     </td>
 
-                    {/* Input Stock Réel */}
                     <td className="px-4 py-2.5 text-center">
                       <input
                         type="number"
@@ -188,14 +203,13 @@ export function InventairePage() {
                           "w-20 h-8 text-center text-xs font-bold font-mono rounded-lg border focus:outline-none focus:ring-2 transition-all",
                           hasEcart
                             ? ecart > 0 
-                              ? "border-amber-400 bg-amber-50 text-amber-700 focus:ring-amber-500/20" // Surplus
-                              : "border-rose-400 bg-rose-50 text-rose-700 focus:ring-rose-500/20"   // Manquant
-                            : "border-slate-200 bg-white text-emerald-700 focus:ring-emerald-500/20 focus:border-emerald-500" // OK
+                              ? "border-amber-400 bg-amber-50 text-amber-700 focus:ring-amber-500/20" 
+                              : "border-rose-400 bg-rose-50 text-rose-700 focus:ring-rose-500/20"   
+                            : "border-slate-200 bg-white text-emerald-700 focus:ring-emerald-500/20 focus:border-emerald-500" 
                         )}
                       />
                     </td>
 
-                    {/* Écart */}
                     <td className="px-4 py-2.5 text-center">
                       {hasEcart ? (
                         <span className={cn(
@@ -209,7 +223,6 @@ export function InventairePage() {
                       )}
                     </td>
 
-                    {/* Statut visuel */}
                     <td className="px-4 py-2.5 text-right">
                       {hasEcart ? (
                         <span className={cn(
@@ -233,7 +246,6 @@ export function InventairePage() {
             </tbody>
           </table>
           
-          {/* Message si la recherche ne donne rien */}
           {filteredMedicaments.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Search className="w-8 h-8 mb-2 opacity-50" />

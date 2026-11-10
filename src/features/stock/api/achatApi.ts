@@ -1,39 +1,53 @@
+import { callBackend } from '../../../shared/lib/tauri';
 import type { Fournisseur } from '../types';
 
-let MOCK_FOURNISSEURS: Fournisseur[] = [
-  { id: 'F-01', nom: 'Centravet Madagascar', telephone: '034 11 222 33', email: 'contact@centravet.mg' },
-  { id: 'F-02', nom: 'PharmaVet Distribution', telephone: '033 44 555 66', email: 'ventes@pharmavet.mg' },
-  { id: 'F-03', nom: 'Local Grossiste', telephone: '032 77 888 99', email: 'info@localgrossiste.mg' }
-];
-
 export const achatApi = {
+  /**
+   * Récupère la liste des fournisseurs depuis la base SQLite.
+   */
   getFournisseurs: async (): Promise<Fournisseur[]> => {
-    return new Promise((resolve) => setTimeout(() => resolve([...MOCK_FOURNISSEURS]), 300));
+    return callBackend<Fournisseur[]>('list_fournisseurs');
   },
   
+  /**
+   * Crée un nouveau fournisseur.
+   */
   createFournisseur: async (data: Omit<Fournisseur, 'id'>): Promise<Fournisseur> => {
-    return new Promise((resolve) => {
-      const newF = { ...data, id: `F-0${MOCK_FOURNISSEURS.length + 1}` };
-      MOCK_FOURNISSEURS = [newF, ...MOCK_FOURNISSEURS];
-      setTimeout(() => resolve(newF), 500);
-    });
+    // On envoie { data: { nom, contact, telephone, email } }
+    return callBackend<Fournisseur>('create_fournisseur', { data });
   },
 
+  /**
+   * Met à jour un fournisseur existant.
+   */
   updateFournisseur: async (id: string, data: Partial<Fournisseur>): Promise<Fournisseur> => {
-    return new Promise((resolve) => {
-      MOCK_FOURNISSEURS = MOCK_FOURNISSEURS.map(f => f.id === id ? { ...f, ...data } : f);
-      setTimeout(() => resolve({ id, ...data } as Fournisseur), 500);
-    });
+    // On envoie { id, data: { ... } }
+    return callBackend<Fournisseur>('update_fournisseur', { id, data });
   },
 
+  /**
+   * Supprime un fournisseur.
+   */
   deleteFournisseur: async (id: string): Promise<void> => {
-    return new Promise((resolve) => {
-      MOCK_FOURNISSEURS = MOCK_FOURNISSEURS.filter(f => f.id !== id);
-      setTimeout(() => resolve(), 500);
-    });
+    return callBackend<void>('delete_fournisseur', { id });
   },
 
-  createAchat: async (data: any): Promise<void> => {
-    return new Promise((resolve) => setTimeout(() => resolve(), 800));
+    /**
+   * Crée un bon de commande (Achat).
+   * Le backend Rust va automatiquement augmenter le stock des produits.
+   */
+  createAchat: async (data: any): Promise<any> => {
+    // ✅ On traduit les données de React (medicamentId, prixAchatUnitaire) 
+    // vers les données attendues par Rust (produitId, prixUnitaire)
+    const rustPayload = {
+      fournisseurId: data.fournisseurId,
+      lignes: data.lignes.map((l: any) => ({
+        produitId: l.medicamentId,
+        quantite: l.quantite,
+        prixUnitaire: l.prixAchatUnitaire
+      }))
+    };
+
+    return callBackend<any>('create_achat', { data: rustPayload });
   }
 };
