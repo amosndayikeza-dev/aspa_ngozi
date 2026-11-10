@@ -12,8 +12,7 @@ const mapProduitToMedicament = (p: any): Medicament => ({
     prixAchat: p.prixAchat,
     prixVente: p.prixVente,
     seuilAlerte: p.seuilAlerte,
-    // ✅ 3. On utilise 'Autre' au lieu de 'Non classé' pour respecter l'interface
-    categorie: (p.categorie as any) || 'Autre', 
+    categorie: p.categorie || 'Autre', // ✅ On récupère la vraie catégorie
     imageUrl: p.imagePath ? convertFileSrc(p.imagePath) : 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=200&q=80',
     lots: (p.stock > 0 || p.datePeremption) ? [{
         id: `LOT-${p.id}`,
@@ -42,6 +41,7 @@ export const medicamentApi = {
             nom: data.nom,
             dci: data.dci || null,
             forme: data.forme || null,
+            categorie: data.categorie || null,
             prixAchat: data.prixAchat,
             prixVente: data.prixVente,
             stock: stock,
@@ -61,6 +61,7 @@ export const medicamentApi = {
             nom: data.nom,
             dci: data.dci || null,
             forme: data.forme || null,
+            categorie: data.categorie || null,
             prixAchat: data.prixAchat,
             prixVente: data.prixVente,
             stock: stock,

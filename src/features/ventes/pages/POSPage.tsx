@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CatalogueProduits } from '../components/CatalogueProduits';
 import { Panier } from '../components/Panier';
 import type { LignePanier, ModePaiement } from '../types';
 import type { Medicament } from '@/features/stock/types';
+import type { Client, Animal } from '@/features/clients/types';
+import { clientApi } from '@/features/clients/api/clientApi';
+import { animalApi } from '@/features/clients/api/animalApi';
+import { venteApi } from '../api/venteApi'; // 👈 Import de l'API de vente
 import { toast } from 'sonner';
 import { Modal } from '@/shared/ui/Modal';
-import { CreditCard, Banknote, Smartphone, CheckCircle2 } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, CheckCircle2, User, PawPrint } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 
 export function POSPage() {
@@ -13,6 +17,29 @@ export function POSPage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [modePaiement, setModePaiement] = useState<ModePaiement>('Espèces');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // ✅ États pour le client et l'animal
+  const [clients, setClients] = useState<Client[]>([]);
+  const [animaux, setAnimaux] = useState<Animal[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedAnimalId, setSelectedAnimalId] = useState<string>('');
+
+  // ✅ Charger les clients au démarrage
+  useEffect(() => {
+    clientApi.getClients().then(setClients).catch(console.error);
+  }, []);
+
+  // ✅ Charger les animaux quand on sélectionne un client
+  useEffect(() => {
+    if (selectedClientId) {
+      animalApi.getAnimauxByClient(selectedClientId)
+        .then(setAnimaux)
+        .catch(console.error);
+      setSelectedAnimalId(''); // Reset l'animal
+    } else {
+      setAnimaux([]);
+    }
+  }, [selectedClientId]);
 
   // --- LOGIQUE DU PANIER ---
   const handleAddToCart = (med: Medicament) => {
@@ -45,30 +72,49 @@ export function POSPage() {
   const total = panier.reduce((acc, ligne) => acc + (ligne.medicament.prixVente * ligne.quantite), 0);
 
   const handleConfirmPayment = async () => {
-    setIsProcessing(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    if (!selectedClientId) {
+      toast.error("Veuillez sélectionner un client pour valider la vente.");
+      return;
+    }
 
-    toast.success(`Vente de ${total.toLocaleString('fr-FR')} FBU encaissée en ${modePaiement} !`);
-    setPanier([]);
-    setIsPaymentModalOpen(false);
-    setIsProcessing(false);
+    setIsProcessing(true);
+    try {
+      // Simulation de l'utilisateur connecté (à remplacer par ton contexte d'auth si tu en as un)
+      const currentUserId = '1'; // Rakoto Jean (Pharmacien)
+
+      // ✅ Appel réel au backend Rust
+      await venteApi.createVente({
+        clientId: selectedClientId,
+        animalId: selectedAnimalId || null, // Optionnel
+        userId: currentUserId,
+        modePaiement: modePaiement,
+        lignes: panier.map(l => ({
+          produitId: l.medicament.id,
+          quantite: l.quantite,
+          prixUnitaire: l.medicament.prixVente
+        }))
+      });
+
+      toast.success(`Vente de ${total.toLocaleString('fr-FR')} FBU encaissée en ${modePaiement} !`);
+      setPanier([]);
+      setIsPaymentModalOpen(false);
+      setSelectedClientId('');
+      setSelectedAnimalId('');
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de la validation de la vente");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
-    // 1. print:h-auto et print:max-w-full pour laisser le ticket prendre la place
     <div className="h-[calc(100vh-5.5rem)] max-w-[1600px] mx-auto select-none print:h-auto print:max-w-full">
-      
-      {/* 2. print:block transforme la grille en affichage simple à l'impression */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 h-full print:block print:h-auto">
         
-        {/* CATALOGUE (Gauche - Caché à l'impression) */}
-        {/* 3. print:hidden pour le faire disparaître du papier */}
         <div className="lg:col-span-7 h-full overflow-hidden print:hidden">
           <CatalogueProduits onAddToCart={handleAddToCart} />
         </div>
 
-        {/* PANIER TICKET THERMIQUE (Droite - Pleine largeur à l'impression) */}
-        {/* 4. print:w-full et print:overflow-visible pour ne pas couper le ticket */}
         <div className="lg:col-span-5 h-full overflow-hidden print:w-full print:h-auto print:overflow-visible">
           <Panier 
             lignes={panier} 
@@ -80,18 +126,55 @@ export function POSPage() {
       </div>
 
       {/* MODALE DE PAIEMENT ENCAISSEMENT */}
-      {/* 5. On l'enveloppe dans une div avec print:hidden pour être sûr qu'elle ne s'imprime pas */}
       <div className="print:hidden">
         <Modal
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
           title="Encaissement de la Vente"
-          description="Choisissez le mode de règlement pour clôturer et imprimer le ticket."
+          description="Choisissez le client et le mode de règlement."
           maxWidth="sm"
           variant="dialog"
         >
           <div className="space-y-3.5 select-none">
             
+            {/* ✅ SÉLECTION DU CLIENT ET DE L'ANIMAL */}
+            <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <User className="w-3 h-3" /> Client (Obligatoire)
+                </label>
+                <select
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                  className="w-full h-8 px-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                >
+                  <option value="">Sélectionner un client...</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>{c.nom} {c.prenom}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Affiché seulement si le client a des animaux */}
+              {selectedClientId && animaux.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    <PawPrint className="w-3 h-3" /> Animal (Optionnel)
+                  </label>
+                  <select
+                    value={selectedAnimalId}
+                    onChange={(e) => setSelectedAnimalId(e.target.value)}
+                    className="w-full h-8 px-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-emerald-500/20"
+                  >
+                    <option value="">Aucun animal spécifique</option>
+                    {animaux.map(a => (
+                      <option key={a.id} value={a.id}>{a.nom} ({a.espece})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
             {/* Montant total à encaisser */}
             <div className="bg-emerald-50/70 p-3 rounded-xl text-center border border-emerald-200/70 shadow-2xs">
               <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-0.5">
@@ -104,10 +187,7 @@ export function POSPage() {
 
             {/* Choix du mode de paiement */}
             <div className="space-y-1.5">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                Mode de règlement
-              </p>
-              
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mode de règlement</p>
               <div className="space-y-1.5">
                 {[
                   { id: 'Espèces', icon: Banknote },
@@ -142,7 +222,7 @@ export function POSPage() {
               </button>
               <button 
                 onClick={handleConfirmPayment}
-                disabled={isProcessing}
+                disabled={isProcessing || !selectedClientId}
                 className="flex-1 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-all shadow-2xs border border-emerald-600 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 {isProcessing ? 'Validation...' : 'Valider & Encaisser'}

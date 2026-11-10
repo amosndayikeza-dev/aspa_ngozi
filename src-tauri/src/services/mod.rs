@@ -9,3 +9,4 @@ pub mod auth;
 pub mod clients;
 pub mod fournisseurs; 
 pub mod produits;
+pub mod ventes;

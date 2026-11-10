@@ -28,6 +28,7 @@ pub fn create_tables(conn: &Connection) -> Result<(), AppError> {
             nom             TEXT NOT NULL,
             dci             TEXT,
             forme           TEXT,
+            categorie       TEXT,
             prix_achat      REAL NOT NULL,
             prix_vente      REAL NOT NULL,
             stock           INTEGER NOT NULL DEFAULT 0,
@@ -90,6 +91,33 @@ pub fn create_tables(conn: &Connection) -> Result<(), AppError> {
             quantite      INTEGER NOT NULL,
             prix_unitaire REAL NOT NULL,
             FOREIGN KEY(achat_id) REFERENCES achats(id) ON DELETE CASCADE,
+            FOREIGN KEY(produit_id) REFERENCES produits(id)
+        );
+
+                -- Phase 6 : Ventes (Factures)
+        CREATE TABLE IF NOT EXISTS ventes (
+            id             TEXT PRIMARY KEY NOT NULL,
+            client_id      TEXT NOT NULL,
+            animal_id      TEXT,           -- Peut être NULL si vente sans animal
+            user_id        TEXT NOT NULL,  -- Le vendeur connecté
+            total          REAL NOT NULL,
+            mode_paiement  TEXT NOT NULL,  -- 'Espèces', 'Mobile Money', 'Carte'
+            date_vente     TEXT NOT NULL,
+            created_at     TEXT NOT NULL,
+            FOREIGN KEY(client_id) REFERENCES clients(id),
+            FOREIGN KEY(animal_id) REFERENCES animaux(id) ON DELETE SET NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+
+        -- Phase 6 : Lignes de vente
+        CREATE TABLE IF NOT EXISTS ventes_lignes (
+            id            TEXT PRIMARY KEY NOT NULL,
+            vente_id      TEXT NOT NULL,
+            produit_id    TEXT NOT NULL,
+            quantite      INTEGER NOT NULL,
+            prix_unitaire REAL NOT NULL,
+            sous_total    REAL NOT NULL,
+            FOREIGN KEY(vente_id) REFERENCES ventes(id) ON DELETE CASCADE,
             FOREIGN KEY(produit_id) REFERENCES produits(id)
         );
 
