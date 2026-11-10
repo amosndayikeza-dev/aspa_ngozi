@@ -1,27 +1,28 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ShieldCheck, Database, Users, Server, Activity, 
   Settings, ArrowRight, Clock, FileText 
 } from 'lucide-react';
 import type { User as UserType } from '@/features/auth/types';
+import { statsApi } from '../api/statsApi'; // 👈 Import de l'API
 import { cn } from '@/shared/lib/cn';
 
 export function AdminDashboard({ user }: { user: UserType }) {
   const navigate = useNavigate();
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Données mockées système
-  const systemStats = {
-    usersActifs: 3,
-    tailleDB: '2.4 MB',
-    uptime: '99.9%',
-    version: 'v1.0.0-beta'
-  };
+  useEffect(() => {
+    statsApi.getAdminStats()
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
 
-  const recentLogs = [
-    { action: 'Connexion réussie', user: 'Rakoto Jean', time: 'Il y a 5 min', type: 'SUCCESS' },
-    { action: 'Modification des paramètres', user: 'Admin Système', time: 'Il y a 2 heures', type: 'INFO' },
-    { action: 'Échec de connexion', user: 'inconnu@mail.com', time: 'Il y a 3 heures', type: 'WARNING' },
-  ];
+  if (isLoading || !data) {
+    return <div className="p-10 text-xs font-medium text-slate-400 animate-pulse">Chargement de la console...</div>;
+  }
 
   return (
     <div className="space-y-4 max-w-[1200px] mx-auto pb-10">
@@ -48,7 +49,7 @@ export function AdminDashboard({ user }: { user: UserType }) {
             <Users className="w-4 h-4 text-blue-500" />
             <span className="text-[10px] font-bold uppercase tracking-wider">Utilisateurs Actifs</span>
           </div>
-          <p className="text-xl font-black text-slate-900">{systemStats.usersActifs}</p>
+          <p className="text-xl font-black text-slate-900">{data.usersActifs}</p>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -56,7 +57,7 @@ export function AdminDashboard({ user }: { user: UserType }) {
             <Database className="w-4 h-4 text-emerald-500" />
             <span className="text-[10px] font-bold uppercase tracking-wider">Base de données</span>
           </div>
-          <p className="text-xl font-black text-slate-900">{systemStats.tailleDB}</p>
+          <p className="text-xl font-black text-slate-900">{data.tailleDB}</p>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -64,7 +65,7 @@ export function AdminDashboard({ user }: { user: UserType }) {
             <Server className="w-4 h-4 text-purple-500" />
             <span className="text-[10px] font-bold uppercase tracking-wider">Uptime (30j)</span>
           </div>
-          <p className="text-xl font-black text-slate-900">{systemStats.uptime}</p>
+          <p className="text-xl font-black text-slate-900">{data.uptime}</p>
         </div>
 
         <div className="bg-slate-900 p-4 rounded-xl shadow-md text-white relative overflow-hidden">
@@ -73,7 +74,7 @@ export function AdminDashboard({ user }: { user: UserType }) {
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
             <span className="text-[10px] font-bold uppercase tracking-wider">Version App</span>
           </div>
-          <p className="text-xl font-black font-mono relative z-10">{systemStats.version}</p>
+          <p className="text-xl font-black font-mono relative z-10">{data.version}</p>
         </div>
       </div>
 
@@ -90,7 +91,7 @@ export function AdminDashboard({ user }: { user: UserType }) {
             </button>
           </div>
           <div className="p-4 space-y-4">
-            {recentLogs.map((log, i) => (
+            {data.recentLogs.map((log: any, i: number) => (
               <div key={i} className="flex gap-3">
                 <div className="mt-1">
                   <div className={cn(

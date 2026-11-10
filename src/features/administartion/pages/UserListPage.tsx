@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Mail, ShieldCheck, MoreHorizontal, UserCheck, UserX, Edit } from 'lucide-react';
+import { Plus, Search, Mail, ShieldCheck, UserCheck, UserX, Edit, Ban, CheckCircle } from 'lucide-react';
 import { userApi } from '../api/userApi';
 import type { User, UserRole } from '../types';
 import { UserForm } from '../components/UserForm';
-import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'; // <-- Import ajouté
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'; 
 import { cn } from '@/shared/lib/cn';
 import { toast } from 'sonner';
 
@@ -15,17 +15,17 @@ export function UserListPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  // États pour la modale de suppression
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // États pour la modale de désactivation
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [userToToggle, setUserToToggle] = useState<User | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const fetchUsers = () => {
     setIsLoading(true);
     userApi.getUsers().then(data => {
       setUsers(data);
       setIsLoading(false);
-    });
+    }).catch(() => setIsLoading(false));
   };
 
   useEffect(() => { fetchUsers(); }, []);
@@ -51,31 +51,30 @@ export function UserListPage() {
       }
       setIsDrawerOpen(false);
       fetchUsers();
-    } catch (e) {
-      toast.error("Erreur lors de l'enregistrement");
+    } catch (e: any) {
+      toast.error(e.message || "Erreur lors de l'enregistrement");
     }
   };
 
-  // --- SUPPRESSION ---
-  const handleOpenDelete = (id: string) => {
-    setUserToDelete(id);
-    setIsDeleteModalOpen(true);
+  // --- DÉSACTIVATION / RÉACTIVATION ---
+  const handleOpenToggle = (user: User) => {
+    setUserToToggle(user);
+    setIsConfirmModalOpen(true);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!userToDelete) return;
-    setIsDeleting(true);
+  const handleConfirmToggle = async () => {
+    if (!userToToggle) return;
+    setIsProcessing(true);
     try {
-      await userApi.deleteUser(userToDelete);
-      toast.success("Compte supprimé avec succès");
-      setIsDeleteModalOpen(false);
-      setIsDrawerOpen(false); // Ferme le panneau d'édition
+      await userApi.toggleUserActif(userToToggle.id, !userToToggle.isActive);
+      toast.success(userToToggle.isActive ? "Compte désactivé" : "Compte réactivé");
+      setIsConfirmModalOpen(false);
       fetchUsers();
-    } catch (e) {
-      toast.error("Erreur lors de la suppression");
+    } catch (e: any) {
+      toast.error(e.message || "Erreur lors de l'opération");
     } finally {
-      setIsDeleting(false);
-      setUserToDelete(null);
+      setIsProcessing(false);
+      setUserToToggle(null);
     }
   };
 
@@ -108,7 +107,7 @@ export function UserListPage() {
           </h1>
           <p className="text-[11px] text-slate-500 mt-1">Gérez les membres de votre personnel et leurs niveaux d'accréditation.</p>
         </div>
-        <button onClick={handleOpenCreate} className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm">
+        <button onClick={handleOpenCreate} className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer">
           <Plus className="w-4 h-4" /> Inviter un membre
         </button>
       </div>
@@ -145,9 +144,16 @@ export function UserListPage() {
                       <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5"><Mail className="w-3 h-3" /> {user.email}</p>
                     </div>
                   </div>
-                  <button onClick={() => handleOpenEdit(user)} className="text-slate-400 hover:text-emerald-600 transition-colors">
-                    <Edit className="w-4 h-4" />
-                  </button>
+                  
+                  {/* Boutons d'action (Edit + Toggle Statut) */}
+                  <div className="flex gap-1">
+                    <button onClick={() => handleOpenEdit(user)} className="text-slate-400 hover:text-emerald-600 p-1 transition-colors" title="Modifier">
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleOpenToggle(user)} className={cn("p-1 transition-colors", user.isActive ? "text-slate-400 hover:text-rose-600" : "text-emerald-500 hover:text-emerald-700")} title={user.isActive ? "Désactiver" : "Réactiver"}>
+                      {user.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex justify-between items-center mt-2 pt-3 border-t border-slate-50">
@@ -168,26 +174,29 @@ export function UserListPage() {
       <div className={cn("fixed top-0 right-0 h-full w-[400px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col", isDrawerOpen ? "translate-x-0" : "translate-x-full")}>
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <h2 className="text-sm font-bold text-slate-900">{selectedUser ? "Modifier le membre" : "Inviter un membre"}</h2>
-          <button onClick={() => setIsDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 text-[11px] font-medium">Fermer</button>
+          <button onClick={() => setIsDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 text-[11px] font-medium cursor-pointer">Fermer</button>
         </div>
         <div className="flex-1 overflow-y-auto p-5">
           <UserForm 
             initialData={selectedUser}
             onSubmit={handleSubmit}
-            onDelete={handleOpenDelete} // <-- Passage de la fonction de suppression
             onCancel={() => setIsDrawerOpen(false)}
           />
         </div>
       </div>
 
-      {/* MODALE DE SUPPRESSION */}
+      {/* MODALE DE CONFIRMATION (Activer/Désactiver) */}
       <ConfirmDialog
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Supprimer ce compte ?"
-        description="Cette action est irréversible. L'utilisateur ne pourra plus se connecter à l'application."
-        isLoading={isDeleting}
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmToggle}
+        title={userToToggle?.isActive ? "Désactiver ce compte ?" : "Réactiver ce compte ?"}
+        description={
+          userToToggle?.isActive 
+            ? "L'utilisateur ne pourra plus se connecter, mais son historique de ventes sera conservé."
+            : "L'utilisateur pourra à nouveau se connecter à l'application."
+        }
+        isLoading={isProcessing}
       />
 
     </div>

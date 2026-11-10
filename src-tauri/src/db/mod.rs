@@ -35,10 +35,14 @@ pub fn init_db(app: &AppHandle) -> Result<Connection, AppError> {
 
     // 4. Applique le schéma (idempotent) + seed si base vide.
     schema::create_tables(&conn)?;
+    schema::migrate_parametres(&conn)?;
     schema::seed_default_users(&conn)?;
     schema::seed_default_produits(&conn)?; 
     schema::seed_default_clients(&conn)?;
     schema::seed_default_animaux(&conn)?;
     schema::seed_default_fournisseurs(&conn)?;
+    schema::seed_default_parametres(&conn)?; 
+
+
     Ok(conn)
 }

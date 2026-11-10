@@ -1,26 +1,17 @@
-import { resolve } from "node:dns";
-import type { PharmacySettings } from "../types";
+import { callBackend } from '../../../shared/lib/tauri';
+import type { PharmacySettings } from '../types';
 
-const DEFAULT_SETTINGS: PharmacySettings = {
-    nom: 'Pharmacie Vétérinaire Aspa Ngozi',
-    adresse: 'Ngozi, Burundi — Avenue de la Paix',
-    telephone: '+257 22 30 45 00',
-    email: 'contact@aspangozi.bi',
-    devise: 'FBU',
-    tva: 0,
-    messageTicket: 'Merci de votre visite ! Prenez soin de vos animaux.',
-    logoUrl: '', // Sera rempli par l'utilisateur (Base64)
-};
+const CURRENT_USER_ROLE = 'ADMIN'; // À remplacer par useAuth() plus tard
 
 export const settingsApi = {
-    getSettings: async (): Promise<PharmacySettings> => {
-        return new Promise((resolve) => setTimeout(() => resolve({ ...DEFAULT_SETTINGS }), 400));
-    },
-
-    updateSettings: async (data: PharmacySettings): Promise<void> => {
-        return new Promise((resolve) => {
-            console.log("Sauvegarde des parametres : ", data);
-            setTimeout(() => resolve(), 600);
-        });
-    }
+  getSettings: async (): Promise<PharmacySettings> => {
+    return callBackend<PharmacySettings>('get_parametres');
+  },
+  
+  updateSettings: async (data: PharmacySettings): Promise<PharmacySettings> => {
+    return callBackend<PharmacySettings>('update_parametres', { 
+      data, 
+      currentUserRole: CURRENT_USER_ROLE 
+    });
+  }
 };

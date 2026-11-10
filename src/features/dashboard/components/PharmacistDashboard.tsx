@@ -16,7 +16,7 @@ export function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    statsApi.getDashboardStats().then((res: any) => {
+    statsApi.getPharmacistStats().then((res: any) => {
       setData(res);
       setIsLoading(false);
     });

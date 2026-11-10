@@ -1,48 +1,47 @@
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, FileText, Stethoscope, User, PawPrint, Calendar } from 'lucide-react';
+import { ordonnanceApi } from '../api/ordonnanceApi';
+import { toast } from 'sonner';
 
 export function OrdonnanceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [ordonnance, setOrdonnance] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // On simule la récupération des données via l'ID (plus tard, appel API)
-  // Pour l'instant, on affiche des données de test pour voir le design
-  const ordonnance = {
-    id: id || 'ORD-2026-001',
-    date: new Date().toISOString(),
-    clientNom: 'Rakoto Jean',
-    animalNom: 'Rex',
-    animalEspece: 'Chien',
-    veterinaireNom: 'Dr. Rabe',
-    lignes: [
-      { nomMedicament: 'Amoxicilline 500mg', posologie: '1 comprimé matin et soir', duree: '7 jours', quantite: 14 }
-    ]
-  };
+  useEffect(() => {
+    if (!id) return;
+    ordonnanceApi.getOrdonnanceById(id)
+      .then(setOrdonnance)
+      .catch(() => {
+        toast.error("Ordonnance introuvable");
+        navigate('/ordonnances');
+      })
+      .finally(() => setIsLoading(false));
+  }, [id, navigate]);
+
+  if (isLoading) return <div className="p-10 text-sm animate-pulse text-slate-500">Chargement de l'ordonnance...</div>;
+  if (!ordonnance) return null;
 
   return (
     <div className="max-w-[1000px] mx-auto pb-10 space-y-4">
       
       {/* EN-TÊTE (Caché à l'impression) */}
       <div className="flex justify-between items-end print:hidden">
-        <button 
-          onClick={() => navigate('/ordonnances')} 
-          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-md transition-colors"
-        >
+        <button onClick={() => navigate('/ordonnances')} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-md transition-colors cursor-pointer">
           <ArrowLeft className="w-3.5 h-3.5" /> Retour aux ordonnances
         </button>
         
         <div className="flex gap-2">
-          <button 
-            onClick={() => window.print()}
-            className="h-9 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm"
-          >
+          <button onClick={() => window.print()} className="h-9 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer">
             <Printer className="w-4 h-4" />
             Imprimer l'ordonnance
           </button>
         </div>
       </div>
 
-      {/* LE DOCUMENT (Ce qui sera imprimé) */}
+      {/* LE DOCUMENT */}
       <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm p-8 print:border-none print:shadow-none print:p-0">
         
         {/* En-tête du document */}
@@ -105,7 +104,7 @@ export function OrdonnanceDetailPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {ordonnance.lignes.map((ligne, index) => (
+              {ordonnance.lignes.map((ligne: any, index: number) => (
                 <tr key={index}>
                   <td className="px-4 py-3 text-xs font-bold text-slate-900">{ligne.nomMedicament}</td>
                   <td className="px-4 py-3 text-xs text-slate-600">{ligne.posologie}</td>

@@ -9,12 +9,6 @@ use rusqlite::Connection;
 use serde::Serialize;
 
 /// Utilisateur RENVOYÉ au frontend après login réussi.
-///
-/// ⚠️ Doit correspondre EXACTEMENT à l'interface `User` de
-///    `src/features/auth/types/index.ts` côté React :
-///    `{ id: string, nom: string, email: string, role: 'PHARMACIEN'|'VENDEUR'|'ADMIN' }`
-///
-/// Aucun champ sensible (`password_hash`) n'est exposé.
 #[derive(Debug, Serialize)]
 pub struct UserPayload {
     pub id: String,
@@ -24,46 +18,42 @@ pub struct UserPayload {
 }
 
 /// Vérifie les identifiants et retourne l'utilisateur si valides.
-///
-/// Sécurité :
-/// - On renvoie **le même message d'erreur** que l'email soit inconnu ou que
-///   le mot de passe soit faux (via `InvalidCredentials`). Cela évite de
-///   révéler à un attaquant l'existence d'un compte.
-/// - Le mot de passe fourni est comparé au hash stocké via `bcrypt::verify`
-///   (temps constant, résistant aux timing attacks).
 pub fn authenticate(
     conn: &Connection,
     email: &str,
     password: &str,
 ) -> Result<UserPayload, AppError> {
-    // 1. Récupère l'utilisateur par email (case-insensitive grâce à
-    //    COLLATE NOCASE sur la colonne, cf. schema.rs).
+    // 1. Récupère l'utilisateur par email (on ajoute 'actif' dans la requête)
     let row = conn.query_row(
-        "SELECT id, nom, email, password_hash, role
+        "SELECT id, nom, email, password_hash, role, actif
          FROM users
          WHERE email = ?1",
         [email],
         |row| {
             Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, String>(3)?,
-                row.get::<_, String>(4)?,
+                row.get::<_, String>(0)?, // id
+                row.get::<_, String>(1)?, // nom
+                row.get::<_, String>(2)?, // email
+                row.get::<_, String>(3)?, // password_hash
+                row.get::<_, String>(4)?, // role
+                row.get::<_, i64>(5)?,    // actif (0 ou 1)
             ))
         },
     );
 
-    let (id, nom, user_email, password_hash, role) = match row {
+    // 2. On récupère le tuple de 6 éléments
+    let (id, nom, user_email, password_hash, role, actif_int) = match row {
         Ok(v) => v,
-        // Email inconnu → même erreur que mot de passe faux (pas de fuite).
-        Err(rusqlite::Error::QueryReturnedNoRows) => {
-            return Err(AppError::InvalidCredentials);
-        }
+        Err(rusqlite::Error::QueryReturnedNoRows) => return Err(AppError::InvalidCredentials),
         Err(e) => return Err(e.into()),
     };
 
-    // 2. Compare le mot de passe fourni au hash bcrypt.
+    // 3. Vérifie si le compte est actif
+    if actif_int == 0 {
+        return Err(AppError::Other("Ce compte a été désactivé. Contactez l'administrateur.".to_string()));
+    }
+
+    // 4. Compare le mot de passe fourni au hash bcrypt.
     let is_valid = bcrypt::verify(password, &password_hash)
         .map_err(|e| AppError::Hash(e.to_string()))?;
 
@@ -71,7 +61,7 @@ pub fn authenticate(
         return Err(AppError::InvalidCredentials);
     }
 
-    // 3. Succès : on renvoie le payload public (sans password_hash).
+    // 5. Succès : on renvoie le payload public.
     Ok(UserPayload {
         id,
         nom,
@@ -90,7 +80,6 @@ mod tests {
     use rusqlite::params;
 
     /// Crée une DB SQLite en mémoire avec la table `users` et un user de test.
-    /// Coût bcrypt = 4 (minimum) pour que les tests soient rapides (~5ms).
     fn setup_in_memory_db() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
@@ -101,6 +90,7 @@ mod tests {
                 email         TEXT NOT NULL UNIQUE COLLATE NOCASE,
                 password_hash TEXT NOT NULL,
                 role          TEXT NOT NULL,
+                actif         INTEGER NOT NULL DEFAULT 1, -- 👈 AJOUTÉ
                 created_at    TEXT NOT NULL
             );
             "#,
@@ -109,8 +99,8 @@ mod tests {
 
         let hash = bcrypt::hash("secret123", 4).unwrap();
         conn.execute(
-            "INSERT INTO users (id, nom, email, password_hash, role, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO users (id, nom, email, password_hash, role, actif, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6)",
             params!["U-01", "Rakoto Jean", "boss@vetpharma.mg", hash, "PHARMACIEN", "2025-01-01"],
         )
         .unwrap();
@@ -150,7 +140,6 @@ mod tests {
 
     #[test]
     fn error_message_does_not_leak_email_existence() {
-        // Le message pour "email inconnu" et "password faux" doit être identique.
         let msg_unknown_email = AppError::InvalidCredentials.to_string();
         let msg_wrong_pw = AppError::InvalidCredentials.to_string();
         assert_eq!(msg_unknown_email, msg_wrong_pw);

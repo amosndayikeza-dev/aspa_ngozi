@@ -1,38 +1,48 @@
 import { useState, useEffect, useRef, type ChangeEvent, type FormEvent } from "react";
-import { Save, Upload, X, Settings, Building2, CreditCard, Image as ImageIcon } from 'lucide-react';
-
+import { Save, Upload, X, Settings, Building2, CreditCard, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react';
 import { settingsApi } from "../api/settingsApi";
 import type { PharmacySettings } from "../types";
 import { TicketPreview } from "../components/TicketPreview";
 import { toast } from "sonner";
-import { cn } from '@/shared/lib/cn';
-import { data } from "react-router-dom";
 
 export function SettingsPage() {
     const [settings, setSettings] = useState<PharmacySettings | null>(null);
-    const [isLoaging, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false); // ✅ Nouvel état d'erreur
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const loadSettings = () => {
+        setIsLoading(true);
+        setHasError(false);
+        settingsApi.getSettings()
+            .then(data => {
+                setSettings(data);
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                console.error("Erreur chargement paramètres:", err);
+                toast.error("Erreur de chargement des paramètres");
+                setHasError(true);
+                setIsLoading(false);
+            });
+    };
+
     useEffect(() => {
-        settingsApi.getSettings().then(data => {
-            setSettings(data);
-            setIsLoading(false);
-        });
+        loadSettings();
     }, []);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         if (!settings) return;
         const { name, value } = e.target;
-        setSettings({ ...settings, [name]: value });
+        setSettings({ ...settings, [name]: name === 'tva' ? parseFloat(value) || 0 : value });
     };
+    
     const handleLogoUpload = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-
         if (!file || !settings) return;
 
         if (file.size > 1024 * 1024) {
-            //------la taille maximale du fichier est de 1MO
             toast.error("Le logo est trop lourd (max 1MO)");
             return;
         }
@@ -50,16 +60,36 @@ export function SettingsPage() {
         setIsSaving(true);
         try {
             await settingsApi.updateSettings(settings);
-            toast.success("Parametres de la pharmacie enregistres !");
+            toast.success("Paramètres enregistrés !");
         } catch (error) {
-            toast.error("Erreur lors de l'enregistremet");
+            toast.error("Erreur lors de l'enregistrement");
         } finally {
             setIsSaving(false);
         }
     };
 
-    if (isLoaging || !settings) return <div className="p-10 text-xs font-medium text-slate-400 animate-pulse"> Chargement des parametres...</div>;
+    // ✅ Écran d'erreur (au lieu du chargement infini)
+    if (hasError) {
+        return (
+            <div className="p-10 max-w-md mx-auto text-center space-y-4">
+                <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto">
+                    <AlertCircle className="w-8 h-8 text-rose-500" />
+                </div>
+                <h2 className="text-sm font-bold text-slate-900">Impossible de charger les paramètres</h2>
+                <p className="text-xs text-slate-500">La base de données est peut-être corrompue ou non initialisée.</p>
+                <button
+                    onClick={loadSettings}
+                    className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-2"
+                >
+                    <RefreshCw className="w-4 h-4" /> Réessayer
+                </button>
+            </div>
+        );
+    }
 
+    if (isLoading || !settings) {
+        return <div className="p-10 text-xs font-medium text-slate-400 animate-pulse">Chargement des paramètres...</div>;
+    }
     return (
         <div className="max-w-[1400px] mx-auto pb-10 space-y-4">
 

@@ -1,16 +1,15 @@
 import { useState, type FormEvent } from 'react';
-import { User as UserIcon, Mail, CheckCircle2, Lock, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { User as UserIcon, Mail, CheckCircle2, Lock, Eye, EyeOff } from 'lucide-react';
 import type { User, UserRole, UserFormData } from '../types';
 import { cn } from '@/shared/lib/cn';
 
 interface UserFormProps {
   initialData?: User | null;
   onSubmit: (data: UserFormData) => Promise<void>;
-  onDelete?: (id: string) => void; 
   onCancel: () => void;
 }
 
-export function UserForm({ initialData, onSubmit, onDelete, onCancel }: UserFormProps) {
+export function UserForm({ initialData, onSubmit, onCancel }: UserFormProps) {
   const [formData, setFormData] = useState<UserFormData>({
     nom: initialData?.nom || '',
     email: initialData?.email || '',
@@ -122,36 +121,13 @@ export function UserForm({ initialData, onSubmit, onDelete, onCancel }: UserForm
         </div>
       </div>
 
-      {/* Statut Actif */}
-      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
-        <div>
-          <p className="text-xs font-bold text-slate-800">Compte actif</p>
-          <p className="text-[10px] text-slate-500">L'utilisateur peut se connecter</p>
-        </div>
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="sr-only peer" />
-          <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-        </label>
-      </div>
-
       {/* Actions */}
-      <div className="pt-2 flex flex-col gap-2">
-        <button type="submit" disabled={isSubmitting} className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50">
+      <div className="pt-4 flex flex-col gap-2 border-t border-slate-100">
+        <button type="submit" disabled={isSubmitting} className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer">
           {isSubmitting ? 'Enregistrement...' : <><CheckCircle2 className="w-4 h-4" /> Enregistrer</>}
         </button>
         
-        {/* Bouton supprimer (visible seulement en mode édition) */}
-        {initialData && onDelete && (
-          <button 
-            type="button" 
-            onClick={() => onDelete(initialData.id)}
-            className="w-full h-9 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors border border-rose-200 mt-2"
-          >
-            <Trash2 className="w-4 h-4" /> Supprimer ce compte
-          </button>
-        )}
-        
-        <button type="button" onClick={onCancel} className="w-full h-9 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 transition-colors">
+        <button type="button" onClick={onCancel} className="w-full h-9 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer">
           Annuler
         </button>
       </div>

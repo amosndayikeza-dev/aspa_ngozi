@@ -65,6 +65,33 @@ pub fn run() {
             //phase 6 : ventes
             commands::ventes::create_vente,
             commands::ventes::list_ventes,
+        
+            //phahe 7 : users
+            commands::users::list_users,
+            commands::users::create_user,
+            commands::users::update_user,
+            commands::users::toggle_user_actif,
+        
+            commands::stats::get_pharmacist_stats,
+            commands::stats::get_seller_stats,
+            commands::stats::get_admin_stats,
+            
+            // Phase 9 — Ordonnances & Export
+            commands::ordonnances::create_ordonnance,
+            commands::ordonnances::list_ordonnances,
+            commands::export::export_ventes_csv,
+            commands::ordonnances::get_ordonnance,
+
+            // Phase 10 — Paramètres
+            commands::parametres::get_parametres,
+            commands::parametres::update_parametres,
+
+            // Phase 11 — Notifications
+            commands::notifications::get_notifications,
+            commands::notifications::mark_notification_read,
+            commands::notifications::mark_all_notifications_read,
+            commands::notifications::delete_notification,
+
         ])
         .run(tauri::generate_context!())
         .expect("Erreur fatale au lancement de Tauri");

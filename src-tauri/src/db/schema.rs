@@ -17,6 +17,7 @@ pub fn create_tables(conn: &Connection) -> Result<(), AppError> {
             email         TEXT NOT NULL UNIQUE COLLATE NOCASE,
             password_hash TEXT NOT NULL,
             role          TEXT NOT NULL CHECK (role IN ('PHARMACIEN', 'VENDEUR', 'ADMIN')),
+            actif         INTEGER NOT NULL DEFAULT 1, -- 👈 NOUVEAU (1 = actif, 0 = inactif)
             created_at    TEXT NOT NULL
         );
 
@@ -121,6 +122,66 @@ pub fn create_tables(conn: &Connection) -> Result<(), AppError> {
             FOREIGN KEY(produit_id) REFERENCES produits(id)
         );
 
+                -- Phase 9 : Ordonnances
+        CREATE TABLE IF NOT EXISTS ordonnances (
+            id             TEXT PRIMARY KEY NOT NULL,
+            animal_id      TEXT NOT NULL,
+            user_id        TEXT NOT NULL, -- Vétérinaire / Pharmacien
+            date_ordonnance TEXT NOT NULL,
+            notes          TEXT,
+            created_at     TEXT NOT NULL,
+            FOREIGN KEY(animal_id) REFERENCES animaux(id) ON DELETE CASCADE,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+
+        -- Phase 9 : Lignes d'ordonnance
+        CREATE TABLE IF NOT EXISTS ordonnances_lignes (
+            id             TEXT PRIMARY KEY NOT NULL,
+            ordonnance_id  TEXT NOT NULL,
+            produit_id     TEXT NOT NULL,
+            posologie      TEXT NOT NULL,
+            duree          TEXT,
+            quantite       INTEGER NOT NULL DEFAULT 1, -- 👈 NOUVEAU
+            FOREIGN KEY(ordonnance_id) REFERENCES ordonnances(id) ON DELETE CASCADE,
+            FOREIGN KEY(produit_id) REFERENCES produits(id)
+        );
+
+        -- Phase 10 : Paramètres de la pharmacie (une seule ligne, id = 1)
+        CREATE TABLE IF NOT EXISTS parametres (
+            id              INTEGER PRIMARY KEY CHECK (id = 1),
+            nom_pharmacie   TEXT NOT NULL,
+            adresse         TEXT,
+            telephone       TEXT,
+            email           TEXT,
+            devise          TEXT NOT NULL DEFAULT 'FBU',
+            en_tete_ticket  TEXT,
+            pied_ticket     TEXT,
+            updated_at      TEXT NOT NULL
+        );
+
+        -- Phase 10 : Paramètres de la pharmacie
+        CREATE TABLE IF NOT EXISTS parametres (
+            id              INTEGER PRIMARY KEY CHECK (id = 1),
+            nom_pharmacie   TEXT NOT NULL,
+            adresse         TEXT,
+            telephone       TEXT,
+            email           TEXT,
+            devise          TEXT NOT NULL DEFAULT 'FBU',
+            tva             REAL NOT NULL DEFAULT 0,     
+            logo_url        TEXT,                        
+            en_tete_ticket  TEXT,
+            pied_ticket     TEXT,
+            updated_at      TEXT NOT NULL
+        );
+
+        -- Phase 11 : États des notifications (lu / supprimé)
+        CREATE TABLE IF NOT EXISTS notifications_states (
+            id         TEXT PRIMARY KEY NOT NULL,
+            is_read    INTEGER NOT NULL DEFAULT 0,
+            is_deleted INTEGER NOT NULL DEFAULT 0
+        );
+
+
         CREATE INDEX IF NOT EXISTS idx_animaux_client ON animaux(client_id);
 
         CREATE INDEX IF NOT EXISTS idx_clients_nom ON clients(nom);
@@ -151,8 +212,8 @@ pub fn seed_default_users(conn: &Connection) -> Result<(), AppError> {
             .map_err(|e| AppError::Hash(e.to_string()))?;
 
         conn.execute(
-            "INSERT INTO users (id, nom, email, password_hash, role, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO users (id, nom, email, password_hash, role, actif, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6)", // 👈 Ajout du 1 ici
             params![id, nom, email, hash, role, now],
         )?;
     }
@@ -259,5 +320,61 @@ pub fn seed_default_fournisseurs(conn: &Connection) -> Result<(), AppError> {
             params![id, nom, contact, tel, email, now],
         )?;
     }
+    Ok(())
+}
+
+/// Insère les paramètres par défaut si la table est vide.
+pub fn seed_default_parametres(conn: &Connection) -> Result<(), AppError> {
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM parametres", [], |row| row.get(0))?;
+    if count > 0 { return Ok(()); }
+
+    let now = chrono::Utc::now().to_rfc3339();
+    
+        conn.execute(
+        "INSERT INTO parametres (id, nom_pharmacie, adresse, telephone, email, devise, tva, logo_url, en_tete_ticket, pied_ticket, updated_at)
+         VALUES (1, ?1, ?2, ?3, ?4, ?5, 0, NULL, ?6, ?7, ?8)",
+        params![
+            "Pharmacie Vétérinaire Aspa Ngozi", "Ngozi, Burundi", "+257 22 30 45 00",
+            "contact@aspangozi.bi", "FBU", "Merci de votre confiance !", 
+            "Les médicaments ne sont ni repris ni échangés.", chrono::Utc::now().to_rfc3339()
+        ],
+    )?;
+    Ok(())
+}
+
+/// Migre la table `parametres` si elle a été créée avec un ancien schéma
+/// (sans les colonnes `tva` et `logo_url`). Idempotent : ne fait rien si
+/// les colonnes existent déjà.
+pub fn migrate_parametres(conn: &Connection) -> Result<(), AppError> {
+    // Lit la liste des colonnes de la table
+    let mut stmt = conn.prepare("PRAGMA table_info(parametres)")?;
+    let colonnes: Vec<String> = stmt
+        .query_map([], |row| row.get::<_, String>(1))?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    // Si la table n'existe pas encore, rien à migrer
+    if colonnes.is_empty() {
+        return Ok(());
+    }
+
+    // Ajoute `tva` si absente
+    if !colonnes.contains(&"tva".to_string()) {
+        conn.execute(
+            "ALTER TABLE parametres ADD COLUMN tva REAL NOT NULL DEFAULT 0",
+            [],
+        )?;
+        println!("✅ Migration : colonne 'tva' ajoutée à la table 'parametres'");
+    }
+
+    // Ajoute `logo_url` si absente
+    if !colonnes.contains(&"logo_url".to_string()) {
+        conn.execute(
+            "ALTER TABLE parametres ADD COLUMN logo_url TEXT",
+            [],
+        )?;
+        println!("✅ Migration : colonne 'logo_url' ajoutée à la table 'parametres'");
+    }
+
     Ok(())
 }

@@ -20,6 +20,7 @@ import { SettingsPage } from '@/features/settings/pages/SettingsPage';
 import { AuditLog } from "@/features/administartion/types";
 import { AuditLogPage } from "@/features/audit/pages/AuditLogPage";
 import { ReportPage } from "@/features/reports/pages/ReportsPage";
+import { NotificationCenterPage } from '@/features/notifications/pages/NotificationCenterPage';
 
 
 /**
@@ -71,7 +72,7 @@ export function AppRouter() {
             <Route path="/ordonnances/nouveau" element={<OrdonnanceFormPage />} />
             <Route path="/ordonnances/:id" element={<OrdonnanceDetailPage />} />
             <Route path="/utilisateurs" element={<UserListPage />} />
-            
+            <Route path="/notifications" element={<NotificationCenterPage />} />
             <Route path="/403" element={<ForbiddenPage />} />
           </Route>
         </Route>

@@ -11,8 +11,10 @@ import { toast } from 'sonner';
 import { Modal } from '@/shared/ui/Modal';
 import { CreditCard, Banknote, Smartphone, CheckCircle2, User, PawPrint } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
+import { useAuth } from '@/features/auth';
 
 export function POSPage() {
+  const { user } = useAuth();
   const [panier, setPanier] = useState<LignePanier[]>([]);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [modePaiement, setModePaiement] = useState<ModePaiement>('Espèces');
@@ -77,6 +79,11 @@ export function POSPage() {
       return;
     }
 
+    if (!user) {
+      toast.error("Utilisateur non authentifié. Veuillez vous reconnecter.");
+      return;
+    }
+
     setIsProcessing(true);
     try {
       // Simulation de l'utilisateur connecté (à remplacer par ton contexte d'auth si tu en as un)
@@ -85,8 +92,8 @@ export function POSPage() {
       // ✅ Appel réel au backend Rust
       await venteApi.createVente({
         clientId: selectedClientId,
-        animalId: selectedAnimalId || null, // Optionnel
-        userId: currentUserId,
+        animalId: selectedAnimalId || null,
+        userId: user.id, // 👈 Remplace le '1' codé en dur
         modePaiement: modePaiement,
         lignes: panier.map(l => ({
           produitId: l.medicament.id,
