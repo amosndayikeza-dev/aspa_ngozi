@@ -1,11 +1,11 @@
-// src/features/clients/pages/ClientDetailPage.tsx
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Phone, Mail, MapPin, Plus, PawPrint, 
   Calendar, Edit, Cake, Weight, Eye, Trash2
 } from 'lucide-react';
 import { clientApi } from '../api/clientApi';
+import { animalApi } from '../api/animalApi'; 
 import type { Client, Animal } from '../types';
 import { Modal } from '@/shared/ui/Modal';
 import { AnimalForm } from '../components/AnimalForm';
@@ -18,110 +18,120 @@ export function ClientDetailPage() {
   const navigate = useNavigate();
   
   const [client, setClient] = useState<Client | null>(null);
+  const [animaux, setAnimaux] = useState<Animal[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
+  
   const [isAnimalModalOpen, setIsAnimalModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-
-  // etat de supprssion
+  
+  // États de suppression
   const [isDeleteAnimalModalOpen, setIsDeleteAnimalModalOpen] = useState(false);
   const [animalToDelete, setAnimalToDelete] = useState<Animal | null>(null);
   const [isDeletingAnimal, setIsDeletingAnimal] = useState(false);
 
-  // animal en cours de manipulation
   const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null);
 
+  // ✅ Chargement combiné (Client + Animaux)
   useEffect(() => {
-    const fetchClient = async () => {
+    const fetchData = async () => {
       if (!id) return;
       try {
-        const data = await clientApi.getClientById(id);
-        setClient(data || null);
+        const [clientData, animauxData] = await Promise.all([
+          clientApi.getClientById(id),
+          animalApi.getAnimauxByClient(id)
+        ]);
+        setClient(clientData);
+        setAnimaux(animauxData);
       } catch (error) {
-        console.error("Client introuvable", error);
+        console.error("Erreur de chargement", error);
+        toast.error("Impossible de charger la fiche client");
         navigate('/clients');
       } finally {
         setIsLoading(false);
       }
     };
-    fetchClient();
+    fetchData();
   }, [id, navigate]);
-  
 
-  // --- AJOUT D'UN ANIMAL ---
+  // --- AJOUT / MODIFICATION D'UN ANIMAL ---
   const handleAddAnimal = async (data: any) => {
     if (!client) return;
     
-    await new Promise(resolve => setTimeout(resolve, 600));
+    try {
+      // On s'assure que le client_id est bien envoyé et que le poids est un nombre
+      const payload = {
+        ...data,
+        clientId: client.id,
+        poidsKg: data.poidsKg ? parseFloat(data.poidsKg) : null,
+      };
 
-    const newAnimal: Animal = {
-      ...data,
-      id: `AN-${Math.floor(Math.random() * 10000)}`,
-    };
-
-    if (selectedAnimal) {
-      const updatedAnimals = client.animaux.map(a => a.id === selectedAnimal.id ? { ...a, ...data } : a);
-      setClient({ ...client, animaux: updatedAnimals });
-      toast.success("Les informations de l'animal ont ete mises a jour");
-    } else {
-      // mode creation 
-      const newAnimal: Animal = { ...data, id: `AN-${Math.floor(Math.random() * 10000)}` };
-      setClient({ ...client, animaux: [...client.animaux, newAnimal] });
+      if (selectedAnimal) {
+        // Mode Édition
+        const updated = await animalApi.updateAnimal(selectedAnimal.id, payload);
+        setAnimaux(animaux.map(a => a.id === selectedAnimal.id ? updated : a));
+        toast.success("Les informations de l'animal ont été mises à jour");
+      } else {
+        // Mode Création
+        const newAnimal = await animalApi.createAnimal(payload);
+        setAnimaux([...animaux, newAnimal]);
+        toast.success("Animal ajouté avec succès");
+      }
+      setIsAnimalModalOpen(false);
+      setSelectedAnimal(null);
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de l'enregistrement de l'animal");
     }
-
-    setIsAnimalModalOpen(false);
-    setSelectedAnimal(null);
   };
 
-  // Ouvre la modale de suppression
+  // --- SUPPRESSION D'UN ANIMAL ---
   const handleOpenDeleteAnimal = (animal: Animal) => {
     setAnimalToDelete(animal);
     setIsDeleteAnimalModalOpen(true);
   };
 
-  // Exécute la suppression
   const handleConfirmDeleteAnimal = async () => {
-    if (!client || !animalToDelete) return;
+    if (!animalToDelete) return;
     setIsDeletingAnimal(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setClient({ ...client, animaux: client.animaux.filter(a => a.id !== animalToDelete.id) });
+      await animalApi.deleteAnimal(animalToDelete.id);
+      setAnimaux(animaux.filter(a => a.id !== animalToDelete.id));
       toast.success(`Le dossier de ${animalToDelete.nom} a été supprimé`);
       setIsDeleteAnimalModalOpen(false);
-    } catch (error) {
-      toast.error("Erreur lors de la suppression");
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de la suppression");
     } finally {
       setIsDeletingAnimal(false);
       setAnimalToDelete(null);
     }
   };
 
-  // action des boutons pour animal
+  // --- MODIFICATION DU CLIENT ---
+  const handleUpdateClient = async (data: any) => {
+    if (!client) return;
+    try {
+      const updatedClient = await clientApi.updateClient(client.id, data);
+      setClient(updatedClient);
+      setIsClientModalOpen(false);
+      toast.success("Profil client mis à jour");
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de la mise à jour du client");
+    }
+  };
+
   const handleOpenCreateAnimal = () => {
     setSelectedAnimal(null);
     setIsAnimalModalOpen(true);
   };
 
   const handleOpenEditAnimal = (animal: Animal) => {
-  setSelectedAnimal(animal);      
-  setIsAnimalModalOpen(true);     
-};
+    setSelectedAnimal(animal);      
+    setIsAnimalModalOpen(true);     
+  };
 
   const handleOpenViewAnimal = (animal: Animal) => {
     setSelectedAnimal(animal);
     setIsViewModalOpen(true);
-  };
-
-  // --- mofication du client ---
-  const handleUpdateClient = async (data: any) => {
-    if (!client) return;
-    await new Promise(resolve => setTimeout(resolve, 600));
-
-    // on met a jour le state local
-    setClient({ ...client, ...data });
-    setIsClientModalOpen(false);
   };
 
   if (isLoading) return <div className="p-5 text-sm text-text-muted animate-pulse">Chargement de la fiche...</div>;
@@ -145,18 +155,14 @@ export function ClientDetailPage() {
         </button>
       </div>
 
-      {/* --- LAYOUT ASYMÉTRIQUE 4+8 --- */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
         {/* ============================================
             COLONNE GAUCHE — Profil Client
             ============================================ */}
         <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
-          {/* Accent stripe emerald */}
           <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
-
           <div className="p-4 flex flex-col">
-            {/* Avatar + nom */}
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shrink-0 ring-2 ring-emerald-200/60">
                 {client.nom.charAt(0)}{client.prenom.charAt(0)}
@@ -178,30 +184,23 @@ export function ClientDetailPage() {
               Modifier le profil
             </button>
 
-            {/* Contacts */}
             <div className="mt-4 pt-4 border-t border-slate-100 space-y-3.5">
               <div className="flex items-start gap-2.5">
-                <div className="p-1.5 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600 shrink-0">
-                  <Phone className="w-3.5 h-3.5" />
-                </div>
+                <div className="p-1.5 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600 shrink-0"><Phone className="w-3.5 h-3.5" /></div>
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Téléphone</p>
                   <p className="text-xs font-mono text-slate-800">{client.telephone}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
-                <div className="p-1.5 bg-slate-50 border border-slate-200/70 rounded-lg text-slate-500 shrink-0">
-                  <Mail className="w-3.5 h-3.5" />
-                </div>
+                <div className="p-1.5 bg-slate-50 border border-slate-200/70 rounded-lg text-slate-500 shrink-0"><Mail className="w-3.5 h-3.5" /></div>
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Email</p>
                   <p className="text-xs text-slate-800 break-all">{client.email}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
-                <div className="p-1.5 bg-slate-50 border border-slate-200/70 rounded-lg text-slate-500 shrink-0">
-                  <MapPin className="w-3.5 h-3.5" />
-                </div>
+                <div className="p-1.5 bg-slate-50 border border-slate-200/70 rounded-lg text-slate-500 shrink-0"><MapPin className="w-3.5 h-3.5" /></div>
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Adresse</p>
                   <p className="text-xs text-slate-800">{client.adresse}</p>
@@ -212,22 +211,18 @@ export function ClientDetailPage() {
         </div>
 
         {/* ============================================
-            COLONNE DROITE — Animaux (table haute densité)
+            COLONNE DROITE — Animaux
             ============================================ */}
         <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col">
-
-          {/* En-tête section animaux */}
           <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="p-1.5 bg-violet-50 border border-violet-100 rounded-lg text-violet-600">
-                <PawPrint className="w-3.5 h-3.5" />
-              </div>
+              <div className="p-1.5 bg-violet-50 border border-violet-100 rounded-lg text-violet-600"><PawPrint className="w-3.5 h-3.5" /></div>
               <div>
                 <h2 className="text-xs font-bold text-slate-900">Animaux enregistrés</h2>
                 <p className="text-[11px] text-slate-400">Dossiers patients de ce propriétaire</p>
               </div>
               <span className="ml-1 bg-violet-100 text-violet-700 text-[11px] font-bold px-2 py-0.5 rounded-full border border-violet-200/70">
-                {client.animaux.length}
+                {animaux.length}
               </span>
             </div>
 
@@ -240,9 +235,8 @@ export function ClientDetailPage() {
             </button>
           </div>
 
-          {/* Table des animaux */}
           <div className="flex-1 overflow-x-auto">
-            {client.animaux.length === 0 ? (
+            {animaux.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center py-14 text-center">
                 <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-center mb-2.5">
                   <PawPrint className="w-5 h-5 text-slate-300" />
@@ -262,8 +256,12 @@ export function ClientDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100/80">
-                  {client.animaux.map((animal) => {
-                    const age = new Date().getFullYear() - new Date(animal.dateNaissance).getFullYear();
+                  {animaux.map((animal) => {
+                    // Gestion de l'âge si la date de naissance est absente
+                    const age = animal.dateNaissance 
+                      ? new Date().getFullYear() - new Date(animal.dateNaissance).getFullYear() 
+                      : '—';
+                    
                     return (
                       <tr key={animal.id} className="hover:bg-slate-50/70 transition-colors duration-150">
                         <td className="px-3.5 py-2">
@@ -276,12 +274,12 @@ export function ClientDetailPage() {
                         </td>
                         <td className="px-3.5 py-2">
                           <p className="text-xs font-medium text-slate-800">{animal.espece}</p>
-                          <p className="text-[11px] text-slate-400">{animal.race}</p>
+                          <p className="text-[11px] text-slate-400">{animal.race || '—'}</p>
                         </td>
                         <td className="px-3.5 py-2">
                           <div className="flex items-center gap-1 text-[11px] text-slate-500">
                             <Cake className="w-3 h-3 text-slate-400" />
-                            <span className="font-mono">{age} an{age > 1 ? 's' : ''}</span>
+                            <span className="font-mono">{age} {age !== '—' ? (age > 1 ? 'ans' : 'an') : ''}</span>
                           </div>
                         </td>
                         <td className="px-3.5 py-2">
@@ -292,27 +290,9 @@ export function ClientDetailPage() {
                         </td>
                         <td className="px-3.5 py-2 text-right">
                           <div className="flex items-center justify-end gap-0.5">
-                            <button
-                              onClick={() => handleOpenViewAnimal(animal)}
-                              className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors"
-                              title="Voir le dossier"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleOpenEditAnimal(animal)}
-                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors"
-                              title="Modifier"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleOpenDeleteAnimal(animal)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
-                              title="Supprimer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <button onClick={() => handleOpenViewAnimal(animal)} className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors" title="Voir le dossier"><Eye className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => handleOpenEditAnimal(animal)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors" title="Modifier"><Edit className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => handleOpenDeleteAnimal(animal)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors" title="Supprimer"><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>
                         </td>
                       </tr>
@@ -323,85 +303,44 @@ export function ClientDetailPage() {
             )}
           </div>
         </div>
-
       </div>
 
-      {/* --- MODALE D'AJOUT D'ANIMAL --- */}
-      <Modal
-        isOpen={isAnimalModalOpen}
-        onClose={() => setIsAnimalModalOpen(false)}
-        title="Ajouter un animal"
-        description={`Créer un dossier pour un animal appartenant à ${client.nom} ${client.prenom}.`}
-        maxWidth="lg"
-      >
-        <AnimalForm 
-          initialData={selectedAnimal}
-          onSubmit={handleAddAnimal}
-          onCancel={() => setIsAnimalModalOpen(false)}
-        />
+      {/* --- MODALES --- */}
+      <Modal isOpen={isAnimalModalOpen} onClose={() => setIsAnimalModalOpen(false)} title="Ajouter un animal" description={`Créer un dossier pour un animal appartenant à ${client.nom} ${client.prenom}.`} maxWidth="lg">
+        <AnimalForm initialData={selectedAnimal} onSubmit={handleAddAnimal} onCancel={() => setIsAnimalModalOpen(false)} />
       </Modal>
 
-      {/* 2. Modale : Voir l'animal (Fiche rapide) */}
-      <Modal
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-        title="Dossier de l'animal"
-        maxWidth="sm"
-      >
+      <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Dossier de l'animal" maxWidth="sm">
         {selectedAnimal && (
           <div className="space-y-4">
             <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-xl">
-              <div className="w-12 h-12 bg-white rounded-xl border border-gray-200 flex items-center justify-center text-2xl shadow-sm">
-                {speciesEmoji[selectedAnimal.espece] || '🐾'}
-              </div>
+              <div className="w-12 h-12 bg-white rounded-xl border border-gray-200 flex items-center justify-center text-2xl shadow-sm">{speciesEmoji[selectedAnimal.espece] || '🐾'}</div>
               <div>
                 <h3 className="text-lg font-bold text-text-main">{selectedAnimal.nom}</h3>
-                <p className="text-xs font-medium text-brand-medium">{selectedAnimal.espece} • {selectedAnimal.race}</p>
+                <p className="text-xs font-medium text-brand-medium">{selectedAnimal.espece} • {selectedAnimal.race || 'Race inconnue'}</p>
               </div>
             </div>
-            
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
                 <p className="text-[10px] font-bold text-text-muted uppercase mb-1">Date de naissance</p>
-                <p className="text-sm font-semibold text-text-main">{new Date(selectedAnimal.dateNaissance).toLocaleDateString('fr-FR')}</p>
+                <p className="text-sm font-semibold text-text-main">
+                  {selectedAnimal.dateNaissance ? new Date(selectedAnimal.dateNaissance).toLocaleDateString('fr-FR') : 'Non renseignée'}
+                </p>
               </div>
               <div className="p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
                 <p className="text-[10px] font-bold text-text-muted uppercase mb-1">Poids</p>
                 <p className="text-sm font-semibold text-text-main">{selectedAnimal.poidsKg ? `${selectedAnimal.poidsKg} kg` : 'Non renseigné'}</p>
               </div>
             </div>
-
-            <div className="p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
-               <p className="text-[10px] font-bold text-text-muted uppercase mb-1">Identifiant unique</p>
-               <p className="text-sm font-mono text-text-main">{selectedAnimal.id}</p>
-            </div>
-
             <div className="pt-4 flex justify-end">
-              <button 
-                onClick={() => setIsViewModalOpen(false)}
-                className="h-9 px-4 bg-brand-dark hover:bg-brand-medium text-white rounded-xl text-xs font-semibold transition-colors"
-              >
-                Fermer
-              </button>
+              <button onClick={() => setIsViewModalOpen(false)} className="h-9 px-4 bg-brand-dark hover:bg-brand-medium text-white rounded-xl text-xs font-semibold transition-colors">Fermer</button>
             </div>
           </div>
         )}
       </Modal>
 
-      {/** MODALE CLIENT */}
-      <Modal
-        isOpen={isClientModalOpen}
-        onClose={() => setIsClientModalOpen(false)}
-        title="Modifier le client"
-        description='Mettre a jour les informations du proprietaire.'
-        maxWidth='lg'
-      >
-        <ClientForm
-          initialData={client}
-          onSubmit={handleUpdateClient}
-          onCancel={() =>setIsClientModalOpen(false)}
-        />
-
+      <Modal isOpen={isClientModalOpen} onClose={() => setIsClientModalOpen(false)} title="Modifier le client" description='Mettre a jour les informations du proprietaire.' maxWidth='lg'>
+        <ClientForm initialData={client} onSubmit={handleUpdateClient} onCancel={() =>setIsClientModalOpen(false)} />
       </Modal>
 
       <ConfirmDialog
@@ -412,7 +351,6 @@ export function ClientDetailPage() {
         description={`Voulez-vous vraiment supprimer le dossier de ${animalToDelete?.nom} ? Cette action est irréversible.`}
         isLoading={isDeletingAnimal}
       />
-
     </div>
   );
 }

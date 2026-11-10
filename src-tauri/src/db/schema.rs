@@ -48,6 +48,22 @@ pub fn create_tables(conn: &Connection) -> Result<(), AppError> {
             created_at    TEXT NOT NULL
         );
 
+                -- Phase 4 : Table des animaux
+        CREATE TABLE IF NOT EXISTS animaux (
+            id             TEXT PRIMARY KEY NOT NULL,
+            client_id      TEXT NOT NULL,
+            nom            TEXT NOT NULL,
+            espece         TEXT NOT NULL, -- Chien, Chat, Bovin, etc.
+            race           TEXT,
+            sexe           TEXT,          -- M ou F
+            date_naissance TEXT,
+            poids_kg       REAL,
+            created_at     TEXT NOT NULL,
+            FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_animaux_client ON animaux(client_id);
+
         CREATE INDEX IF NOT EXISTS idx_clients_nom ON clients(nom);
 
         CREATE INDEX IF NOT EXISTS idx_produits_nom ON produits(nom);
@@ -134,6 +150,32 @@ pub fn seed_default_clients(conn: &Connection) -> Result<(), AppError> {
             "INSERT INTO clients (id, nom, prenom, telephone, email, adresse, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![id, nom, prenom, tel, email, adresse, now],
+        )?;
+    }
+    Ok(())
+}
+
+/// Insère des animaux de démonstration pour les clients existants.
+pub fn seed_default_animaux(conn: &Connection) -> Result<(), AppError> {
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM animaux", [], |row| row.get(0))?;
+    if count > 0 {
+        return Ok(());
+    }
+
+    let now = chrono::Utc::now().to_rfc3339();
+    
+    // (id, client_id, nom, espece, race, sexe, date_naissance, poids)
+    let defaults: [(&str, &str, &str, &str, &str, &str, &str, f64); 3] = [
+        ("A-01", "C-01", "Rex", "Chien", "Berger Allemand", "M", "2020-05-12", 28.5),
+        ("A-02", "C-01", "Minou", "Chat", "Européen", "F", "2022-08-20", 4.2),
+        ("A-03", "C-02", "Bella", "Chien", "Golden Retriever", "F", "2019-11-03", 31.0),
+    ];
+
+    for (id, client_id, nom, espece, race, sexe, ddn, poids) in defaults {
+        conn.execute(
+            "INSERT INTO animaux (id, client_id, nom, espece, race, sexe, date_naissance, poids_kg, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![id, client_id, nom, espece, race, sexe, ddn, poids, now],
         )?;
     }
     Ok(())

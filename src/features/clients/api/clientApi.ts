@@ -1,30 +1,28 @@
 import { callBackend } from '../../../shared/lib/tauri';
-import type { Animal, Client } from '../types';
+import type { Client, Animal } from '../types';
 
 /**
- * Transforme les données brutes renvoyées par Rust (snake_case/camelCase partiel)
- * vers l'interface `Client` attendue par React.
+ * Transforme les données brutes renvoyées par Rust vers l'interface `Client`.
  */
 const mapClient = (c: any): Client => ({
   ...c,
-  // On mappe createdAt (Rust) vers dateInscription (React)
   dateInscription: c.createdAt || new Date().toISOString(),
-  // On initialise un tableau vide pour les animaux (qui seront ajoutés en Phase 4)
-  animaux: c.animaux || [],
+  // ✅ On crée un tableau de la taille de `animauxCount` (envoyé par Rust)
+  // Cela permet à `client.animaux.length` d'afficher le bon nombre dans la liste.
+  animaux: Array.from({ length: c.animauxCount || 0 }).map((_, i) => ({ 
+    id: `virtual-${i}`,
+    nom: 'Chargement...',
+    espece: ''
+  } as Animal)),
 });
 
-/**
- * API de gestion des clients.
- * Branchée sur le backend Rust via Tauri (IPC).
- */
 export const clientApi = {
-
   /**
-   * Récupère la liste de tous les clients depuis la base de données.
+   * Récupère la liste de tous les clients.
    */
   getClients: async (): Promise<Client[]> => {
     const clients = await callBackend<any[]>('list_clients');
-    return clients.map(mapClient); // ✅ On applique le mapper
+    return clients.map(mapClient);
   },
 
   /**
@@ -32,15 +30,15 @@ export const clientApi = {
    */
   getClientById: async (id: string): Promise<Client> => {
     const c = await callBackend<any>('get_client', { id });
-    return mapClient(c); // ✅ On applique le mapper
+    return mapClient(c);
   },
 
   /**
-   * Crée un nouveau client dans la base de données.
+   * Crée un nouveau client.
    */
   createClient: async (data: Omit<Client, 'id' | 'dateInscription' | 'animaux'>): Promise<Client> => {
     const c = await callBackend<any>('create_client', { data });
-    return mapClient(c); // ✅ On applique le mapper
+    return mapClient(c);
   },
 
   /**
@@ -48,21 +46,13 @@ export const clientApi = {
    */
   updateClient: async (id: string, data: Partial<Client>): Promise<Client> => {
     const c = await callBackend<any>('update_client', { id, data });
-    return mapClient(c); // ✅ On applique le mapper
+    return mapClient(c);
   },
 
   /**
-   * Supprime un client.
+   * Supprime un client. (Ses animaux seront supprimés en cascade côté Rust)
    */
   deleteClient: async (id: string): Promise<void> => {
     return callBackend<void>('delete_client', { id });
-  },
-
-  /**
-   * Met à jour un animal existant.
-   * (Commande à créer en Phase 4)
-   */
-  updateAnimal: async (clientId: string, animalId: string, data: Partial<Animal>): Promise<Animal> => {
-    return callBackend<Animal>('update_animal', { clientId, animalId, data });
   }
 };

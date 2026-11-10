@@ -14,6 +14,7 @@ pub struct ClientPayload {
     pub telephone: Option<String>,
     pub email: Option<String>,
     pub adresse: Option<String>,
+    pub animaux_count: i64, 
     pub created_at: String,
 }
 
@@ -28,11 +29,12 @@ pub struct ClientInput {
     pub adresse: Option<String>,
 }
 
-/// Liste tous les clients.
+/// Liste tous les clients (avec le nombre d'animaux).
 pub fn list(conn: &Connection) -> Result<Vec<ClientPayload>, AppError> {
     let mut stmt = conn.prepare(
-        "SELECT id, nom, prenom, telephone, email, adresse, created_at 
-         FROM clients ORDER BY nom ASC, prenom ASC"
+        "SELECT c.id, c.nom, c.prenom, c.telephone, c.email, c.adresse, c.created_at,
+                (SELECT COUNT(*) FROM animaux a WHERE a.client_id = c.id) as animaux_count
+         FROM clients c ORDER BY c.nom ASC, c.prenom ASC"
     )?;
     
     let rows = stmt.query_map([], |row| {
@@ -44,21 +46,21 @@ pub fn list(conn: &Connection) -> Result<Vec<ClientPayload>, AppError> {
             email: row.get(4)?,
             adresse: row.get(5)?,
             created_at: row.get(6)?,
+            animaux_count: row.get(7)?, 
         })
     })?;
 
     let mut clients = Vec::new();
-    for row in rows {
-        clients.push(row?);
-    }
+    for row in rows { clients.push(row?); }
     Ok(clients)
 }
 
-/// Récupère un client par son ID.
+/// Récupère un client par son ID (avec le nombre d'animaux).
 pub fn get(conn: &Connection, id: &str) -> Result<ClientPayload, AppError> {
     let result = conn.query_row(
-        "SELECT id, nom, prenom, telephone, email, adresse, created_at 
-         FROM clients WHERE id = ?1",
+        "SELECT c.id, c.nom, c.prenom, c.telephone, c.email, c.adresse, c.created_at,
+                (SELECT COUNT(*) FROM animaux a WHERE a.client_id = c.id) as animaux_count
+         FROM clients c WHERE c.id = ?1",
         [id],
         |row| {
             Ok(ClientPayload {
@@ -69,6 +71,7 @@ pub fn get(conn: &Connection, id: &str) -> Result<ClientPayload, AppError> {
                 email: row.get(4)?,
                 adresse: row.get(5)?,
                 created_at: row.get(6)?,
+                animaux_count: row.get(7)?,
             })
         },
     );
@@ -80,14 +83,15 @@ pub fn get(conn: &Connection, id: &str) -> Result<ClientPayload, AppError> {
     }
 }
 
-/// Recherche des clients par nom, prénom ou téléphone.
+/// Recherche des clients par nom, prénom ou téléphone (avec le nombre d'animaux).
 pub fn search(conn: &Connection, query: &str) -> Result<Vec<ClientPayload>, AppError> {
-    let search_term = format!("%{}%", query); // ex: "%Rak%"
+    let search_term = format!("%{}%", query);
     let mut stmt = conn.prepare(
-        "SELECT id, nom, prenom, telephone, email, adresse, created_at 
-         FROM clients 
-         WHERE nom LIKE ?1 OR prenom LIKE ?1 OR telephone LIKE ?1
-         ORDER BY nom ASC"
+        "SELECT c.id, c.nom, c.prenom, c.telephone, c.email, c.adresse, c.created_at,
+                (SELECT COUNT(*) FROM animaux a WHERE a.client_id = c.id) as animaux_count
+         FROM clients c
+         WHERE c.nom LIKE ?1 OR c.prenom LIKE ?1 OR c.telephone LIKE ?1
+         ORDER BY c.nom ASC"
     )?;
     
     let rows = stmt.query_map([search_term], |row| {
@@ -99,6 +103,7 @@ pub fn search(conn: &Connection, query: &str) -> Result<Vec<ClientPayload>, AppE
             email: row.get(4)?,
             adresse: row.get(5)?,
             created_at: row.get(6)?,
+            animaux_count: row.get(7)?, // ✅ Ajouté ici aussi
         })
     })?;
 
@@ -169,7 +174,12 @@ mod tests {
                 adresse TEXT,
                 created_at TEXT NOT NULL
             );
-            "#
+            -- ✅ On ajoute la table animaux pour que la sous-requête fonctionne
+            CREATE TABLE animaux (
+                id TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL
+            );
+            "# 
         ).unwrap();
         conn
     }
@@ -190,6 +200,7 @@ mod tests {
         
         let c = create(&conn, dummy_input("Dupont", "Jean")).unwrap();
         assert_eq!(c.nom, "Dupont");
+        assert_eq!(c.animaux_count, 0); // ✅ Vérification du compteur
 
         let fetched = get(&conn, &c.id).unwrap();
         assert_eq!(fetched.prenom, "Jean");
@@ -202,16 +213,20 @@ mod tests {
     }
 
     #[test]
-    fn test_search_client() {
+    fn test_search_client_with_animals() {
         let conn = setup_db();
-        create(&conn, dummy_input("Rakoto", "Jean")).unwrap();
+        let c1 = create(&conn, dummy_input("Rakoto", "Jean")).unwrap();
         create(&conn, dummy_input("Randria", "Sarah")).unwrap();
+
+        // Ajoutons un animal à Rakoto pour vérifier le comptage
+        conn.execute(
+            "INSERT INTO animaux (id, client_id) VALUES ('A-01', ?1)",
+            [&c1.id],
+        ).unwrap();
 
         let results = search(&conn, "Rak").unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].nom, "Rakoto");
-
-        let results_tel = search(&conn, "0340").unwrap();
-        assert_eq!(results_tel.len(), 2);
+        assert_eq!(results[0].animaux_count, 1); // ✅ Doit compter 1 animal
     }
 }

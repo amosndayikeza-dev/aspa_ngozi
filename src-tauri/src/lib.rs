@@ -47,6 +47,13 @@ pub fn run() {
             commands::clients::create_client,
             commands::clients::update_client,
             commands::clients::delete_client,
+            
+            //phase 4 -Animaux
+            commands::animaux::list_animaux_by_client,
+            commands::animaux::get_animal,
+            commands::animaux::create_animal,
+            commands::animaux::update_animal,
+            commands::animaux::delete_animal,
         ])
         .run(tauri::generate_context!())
         .expect("Erreur fatale au lancement de Tauri");

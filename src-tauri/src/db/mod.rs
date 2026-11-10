@@ -37,6 +37,7 @@ pub fn init_db(app: &AppHandle) -> Result<Connection, AppError> {
     schema::create_tables(&conn)?;
     schema::seed_default_users(&conn)?;
     schema::seed_default_produits(&conn)?; 
-     schema::seed_default_clients(&conn)?;
+    schema::seed_default_clients(&conn)?;
+    schema::seed_default_animaux(&conn)?;
     Ok(conn)
 }
