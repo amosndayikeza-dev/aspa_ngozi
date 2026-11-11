@@ -181,6 +181,19 @@ pub fn create_tables(conn: &Connection) -> Result<(), AppError> {
             is_deleted INTEGER NOT NULL DEFAULT 0
         );
 
+                -- Phase 13 : Journal d'Audit
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id         TEXT PRIMARY KEY NOT NULL,
+            user_id    TEXT NOT NULL,
+            action     TEXT NOT NULL,
+            module     TEXT NOT NULL,
+            details    TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_audit_date ON audit_logs(created_at);
+
 
         CREATE INDEX IF NOT EXISTS idx_animaux_client ON animaux(client_id);
 

@@ -2,7 +2,7 @@
 
 use crate::error::AppError;
 use chrono::{Local, NaiveDate};
-use rusqlite::{params, Connection};
+use rusqlite::Connection;
 use serde::Serialize;
 use std::collections::HashMap;
 

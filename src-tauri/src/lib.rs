@@ -65,6 +65,8 @@ pub fn run() {
             //phase 6 : ventes
             commands::ventes::create_vente,
             commands::ventes::list_ventes,
+            commands::ventes::list_ventes_by_user,   
+            commands::ventes::get_vente_detail, 
         
             //phahe 7 : users
             commands::users::list_users,
@@ -92,6 +94,12 @@ pub fn run() {
             commands::notifications::mark_all_notifications_read,
             commands::notifications::delete_notification,
 
+            // Phase 12 — Rapports
+            commands::reports::get_report_data,
+
+            // Phase 13 — Audit
+            commands::audit::get_audit_logs,
+            commands::audit::create_audit_log,
         ])
         .run(tauri::generate_context!())
         .expect("Erreur fatale au lancement de Tauri");

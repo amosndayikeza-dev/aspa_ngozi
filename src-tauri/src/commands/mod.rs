@@ -13,3 +13,5 @@ pub mod ordonnances;
 pub mod export;
 pub mod parametres;
 pub mod notifications;
+pub mod reports;
+pub mod audit;

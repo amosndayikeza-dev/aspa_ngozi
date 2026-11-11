@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, PlusCircle, Edit, Trash2, LogIn, Clock, Filter } from 'lucide-react';
+import { ShieldCheck, PlusCircle, Edit, Trash2, LogIn, Clock, Filter, Inbox, AlertCircle } from 'lucide-react';
 import { auditApi } from '../api/auditApi';
 import type { AuditLog, AuditAction } from '../types';
 import { cn } from '@/shared/lib/cn';
@@ -7,18 +7,24 @@ import { cn } from '@/shared/lib/cn';
 export function AuditLogPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);   // ✅ Nouveau
   const [filter, setFilter] = useState<AuditAction | 'ALL'>('ALL');
 
   useEffect(() => {
-    auditApi.getLogs().then(data => {
-      setLogs(data);
-      setIsLoading(false);
-    });
+    auditApi.getLogs()
+      .then(data => {
+        setLogs(data);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Erreur chargement audit:", err);
+        setHasError(true);
+        setIsLoading(false);
+      });
   }, []);
 
   const filteredLogs = filter === 'ALL' ? logs : logs.filter(l => l.action === filter);
 
-  // Configuration visuelle selon l'action
   const actionConfig = {
     CREATE: { icon: PlusCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Création' },
     UPDATE: { icon: Edit, color: 'text-blue-600', bg: 'bg-blue-50', label: 'Modification' },
@@ -26,12 +32,22 @@ export function AuditLogPage() {
     LOGIN: { icon: LogIn, color: 'text-slate-600', bg: 'bg-slate-100', label: 'Connexion' },
   };
 
+  // ✅ Écran d'erreur
+  if (hasError) {
+    return (
+      <div className="p-10 max-w-md mx-auto text-center space-y-3">
+        <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+        <h2 className="text-sm font-bold text-slate-900">Erreur de chargement</h2>
+        <p className="text-xs text-slate-500">La table audit_logs n'existe peut-être pas. Supprime vetpharma.db et relance.</p>
+      </div>
+    );
+  }
+
   if (isLoading) return <div className="p-10 text-xs font-medium text-slate-400 animate-pulse">Chargement du journal...</div>;
 
   return (
     <div className="max-w-[1000px] mx-auto pb-10 space-y-4">
       
-      {/* EN-TÊTE */}
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -43,7 +59,6 @@ export function AuditLogPage() {
         </div>
       </div>
 
-      {/* FILTRES */}
       <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-slate-200/90 shadow-sm w-fit">
         <Filter className="w-3.5 h-3.5 text-slate-400 ml-1.5" />
         {(['ALL', 'CREATE', 'UPDATE', 'DELETE', 'LOGIN'] as const).map((f) => (
@@ -60,48 +75,55 @@ export function AuditLogPage() {
         ))}
       </div>
 
-      {/* TIMELINE */}
-      <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm p-6">
-        <div className="relative border-l border-slate-200 ml-3 space-y-6">
-          {filteredLogs.map((log) => {
-            const config = actionConfig[log.action];
-            const Icon = config.icon;
-            
-            return (
-              <div key={log.id} className="relative pl-6">
-                {/* Point sur la ligne */}
-                <div className={cn(
-                  "absolute -left-[17px] top-0.5 w-8 h-8 rounded-full border-4 border-white flex items-center justify-center shadow-sm",
-                  config.bg
-                )}>
-                  <Icon className={cn("w-3.5 h-3.5", config.color)} />
-                </div>
-                
-                {/* Contenu de l'événement */}
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 hover:border-slate-200 transition-colors">
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-900">{log.userNom}</span>
-                      <span className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded", config.bg, config.color)}>
-                        {log.userRole}
+      {/* ✅ Message si liste vide */}
+      {filteredLogs.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm p-12 text-center">
+          <Inbox className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-sm font-bold text-slate-700">Aucun log pour le moment</p>
+          <p className="text-xs text-slate-500 mt-1">
+            Les logs apparaissent automatiquement après chaque vente.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm p-6">
+          <div className="relative border-l border-slate-200 ml-3 space-y-6">
+            {filteredLogs.map((log) => {
+              const config = actionConfig[log.action];
+              const Icon = config.icon;
+              
+              return (
+                <div key={log.id} className="relative pl-6">
+                  <div className={cn(
+                    "absolute -left-[17px] top-0.5 w-8 h-8 rounded-full border-4 border-white flex items-center justify-center shadow-sm",
+                    config.bg
+                  )}>
+                    <Icon className={cn("w-3.5 h-3.5", config.color)} />
+                  </div>
+                  
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 hover:border-slate-200 transition-colors">
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900">{log.userNom}</span>
+                        <span className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded", config.bg, config.color)}>
+                          {log.userRole}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                        <Clock className="w-3 h-3" />
+                        {new Date(log.date).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
-                      <Clock className="w-3 h-3" />
-                      {new Date(log.date).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    <p className="text-[11px] text-slate-700 mt-1">
+                      <span className="font-semibold">{config.label}</span> dans le module <span className="font-semibold">{log.module}</span>.
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{log.details}</p>
                   </div>
-                  <p className="text-[11px] text-slate-700 mt-1">
-                    <span className="font-semibold">{config.label}</span> dans le module <span className="font-semibold">{log.module}</span>.
-                  </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">{log.details}</p>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
-
+      )}
     </div>
   );
 }

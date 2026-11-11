@@ -20,5 +20,19 @@ export const venteApi = {
    */
   getHistoriqueVentes: async () => {
     return callBackend<any[]>('list_ventes');
-  }
+  },
+
+    /**
+   * Récupère l'historique des ventes d'un vendeur.
+   */
+  getVentesByUser: async (userId: string): Promise<any[]> => {
+    return callBackend<any[]>('list_ventes_by_user', { userId });
+  },
+
+  /**
+   * Récupère le détail d'une vente (avec ses lignes).
+   */
+  getVenteDetail: async (id: string): Promise<any> => {
+    return callBackend<any>('get_vente_detail', { id });
+  },
 };
