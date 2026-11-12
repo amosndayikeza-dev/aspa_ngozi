@@ -12,8 +12,11 @@ pub fn export_ventes_csv(conn: &Connection, path: &str) -> Result<(), AppError> 
          ORDER BY v.date_vente DESC"
     )?;
 
-    let mut wtr = csv::Writer::from_path(path).map_err(|e| AppError::Other(e.to_string()))?;
-    wtr.write_record(&["ID", "Date", "Client Nom", "Client Prenom", "Vendeur", "Total", "Paiement"]).map_err(|e| AppError::Other(e.to_string()))?;
+    let mut wtr = csv::Writer::from_path(path)
+        .map_err(|e| AppError::Other(format!("Impossible de créer le fichier : {}", e)))?;
+    
+    wtr.write_record(&["ID", "Date", "Client Nom", "Client Prenom", "Vendeur", "Total", "Paiement"])
+        .map_err(|e| AppError::Other(e.to_string()))?;
 
     let rows = stmt.query_map([], |row| {
         Ok((

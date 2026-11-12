@@ -22,6 +22,9 @@ import { AuditLogPage } from "@/features/audit/pages/AuditLogPage";
 import { ReportPage } from "@/features/reports/pages/ReportsPage";
 import { NotificationCenterPage } from '@/features/notifications/pages/NotificationCenterPage';
 import { VenteHistoriquePage } from "@/features/ventes/pages/VenteHistoriquePage";
+import { DetteListPage } from "@/features/dettes/pages/DetteListPage";
+import { DetteDetailPage } from "@/features/dettes/pages/DetteDetailPage";
+
 
 /**
  * Petite page temporaire pour verifier que le routing fonctionne.
@@ -75,6 +78,8 @@ export function AppRouter() {
             <Route path="/notifications" element={<NotificationCenterPage />} />
             <Route path="/vente/historique" element={<VenteHistoriquePage />} />
             <Route path="/403" element={<ForbiddenPage />} />
+            <Route path="/dettes" element={<DetteListPage />} />
+            <Route path="/dettes/:id" element={<DetteDetailPage />} />
           </Route>
         </Route>
 

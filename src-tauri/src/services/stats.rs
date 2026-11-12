@@ -16,6 +16,10 @@ pub struct PharmacistStats {
     pub ventes_semaine: Vec<DayVentes>,
     pub repartition_categories: Vec<CategoryCA>,
     pub top_produits: Vec<TopProduct>,
+    pub total_creances: f64,       
+    pub nb_dettes_retard: i64, 
+    pub valeur_stock: f64,        
+    pub valeur_stock_perime: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -185,8 +189,55 @@ pub fn get_pharmacist_stats(conn: &Connection) -> Result<PharmacistStats, AppErr
     })?;
     for row in rows { top_produits.push(row?); }
 
-    Ok(PharmacistStats { kpis, ventes_semaine, repartition_categories, top_produits })
+        // 5. Total créances (dettes en cours)
+        let total_creances: f64 = conn.query_row(
+            "SELECT COALESCE(SUM(montant_initial - montant_paye), 0.0) 
+            FROM dettes WHERE statut = 'EN_COURS'",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0.0);
+
+        // 6. Nombre de dettes en retard
+        let nb_dettes_retard: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM dettes 
+            WHERE statut = 'EN_COURS' AND date_echeance < date('now', 'localtime')",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+            // 7. Valeur du stock VALIDE (lots non périmés × prix d'achat)
+    let valeur_stock: f64 = conn.query_row(
+        "SELECT COALESCE(SUM(l.quantite * l.prix_achat), 0.0)
+         FROM lots l
+         WHERE l.quantite > 0 
+           AND l.date_peremption >= date('now', 'localtime')",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(0.0);
+
+    // 8. Valeur du stock PÉRIMÉ (à jeter, perte sèche)
+    let valeur_stock_perime: f64 = conn.query_row(
+        "SELECT COALESCE(SUM(l.quantite * l.prix_achat), 0.0)
+         FROM lots l
+         WHERE l.quantite > 0 
+           AND l.date_peremption < date('now', 'localtime')",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(0.0);
+
+    Ok(PharmacistStats {
+        kpis,
+        ventes_semaine,
+        repartition_categories,
+        top_produits,
+        total_creances,
+        nb_dettes_retard,
+        valeur_stock,          
+        valeur_stock_perime,   
+    })
+
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STATS VENDEUR

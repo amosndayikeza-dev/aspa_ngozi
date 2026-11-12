@@ -18,3 +18,5 @@ pub mod parametres;
 pub mod notifications;
 pub mod reports;
 pub mod audit;
+pub mod dettes;
+pub mod lots; 

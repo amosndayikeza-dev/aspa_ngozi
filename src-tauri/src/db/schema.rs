@@ -89,10 +89,12 @@ pub fn create_tables(conn: &Connection) -> Result<(), AppError> {
             id            TEXT PRIMARY KEY NOT NULL,
             achat_id      TEXT NOT NULL,
             produit_id    TEXT NOT NULL,
+            lot_id        TEXT,
             quantite      INTEGER NOT NULL,
             prix_unitaire REAL NOT NULL,
             FOREIGN KEY(achat_id) REFERENCES achats(id) ON DELETE CASCADE,
             FOREIGN KEY(produit_id) REFERENCES produits(id)
+            FOREIGN KEY(lot_id) REFERENCES lots(id)
         );
 
                 -- Phase 6 : Ventes (Factures)
@@ -115,11 +117,13 @@ pub fn create_tables(conn: &Connection) -> Result<(), AppError> {
             id            TEXT PRIMARY KEY NOT NULL,
             vente_id      TEXT NOT NULL,
             produit_id    TEXT NOT NULL,
+            lot_id        TEXT,
             quantite      INTEGER NOT NULL,
             prix_unitaire REAL NOT NULL,
             sous_total    REAL NOT NULL,
             FOREIGN KEY(vente_id) REFERENCES ventes(id) ON DELETE CASCADE,
             FOREIGN KEY(produit_id) REFERENCES produits(id)
+            FOREIGN KEY(lot_id) REFERENCES lots(id)
         );
 
                 -- Phase 9 : Ordonnances
@@ -191,6 +195,56 @@ pub fn create_tables(conn: &Connection) -> Result<(), AppError> {
             created_at TEXT NOT NULL,
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
+
+                -- Module Dettes : créances clients
+        CREATE TABLE IF NOT EXISTS dettes (
+            id                TEXT PRIMARY KEY NOT NULL,
+            vente_id          TEXT NOT NULL,
+            client_id         TEXT NOT NULL,
+            montant_initial   REAL NOT NULL,
+            montant_paye      REAL NOT NULL DEFAULT 0,
+            date_echeance     TEXT NOT NULL,
+            statut            TEXT NOT NULL DEFAULT 'EN_COURS', -- 'EN_COURS' | 'SOLDE'
+            user_id           TEXT NOT NULL,
+            created_at        TEXT NOT NULL,
+            FOREIGN KEY(vente_id) REFERENCES ventes(id),
+            FOREIGN KEY(client_id) REFERENCES clients(id),
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_dettes_client ON dettes(client_id);
+        CREATE INDEX IF NOT EXISTS idx_dettes_statut ON dettes(statut);
+
+        -- Paiements (versements) sur les dettes
+        CREATE TABLE IF NOT EXISTS paiements_dettes (
+            id             TEXT PRIMARY KEY NOT NULL,
+            dette_id       TEXT NOT NULL,
+            montant        REAL NOT NULL,
+            mode_paiement  TEXT NOT NULL,
+            date_paiement  TEXT NOT NULL,
+            user_id        TEXT NOT NULL,
+            notes          TEXT,
+            created_at     TEXT NOT NULL,
+            FOREIGN KEY(dette_id) REFERENCES dettes(id) ON DELETE CASCADE,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+
+                -- Phase B : Table des lots (gestion pharmaceutique par lot)
+        CREATE TABLE IF NOT EXISTS lots (
+            id              TEXT PRIMARY KEY NOT NULL,
+            produit_id      TEXT NOT NULL,
+            numero_lot      TEXT NOT NULL,
+            quantite        INTEGER NOT NULL DEFAULT 0,
+            date_peremption TEXT NOT NULL,
+            prix_achat      REAL NOT NULL DEFAULT 0,
+            created_at      TEXT NOT NULL,
+            FOREIGN KEY(produit_id) REFERENCES produits(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_lots_produit ON lots(produit_id);
+        CREATE INDEX IF NOT EXISTS idx_lots_peremption ON lots(date_peremption);
+
+        CREATE INDEX IF NOT EXISTS idx_paiements_dette ON paiements_dettes(dette_id);
 
         CREATE INDEX IF NOT EXISTS idx_audit_date ON audit_logs(created_at);
 
@@ -341,7 +395,7 @@ pub fn seed_default_parametres(conn: &Connection) -> Result<(), AppError> {
     let count: i64 = conn.query_row("SELECT COUNT(*) FROM parametres", [], |row| row.get(0))?;
     if count > 0 { return Ok(()); }
 
-    let now = chrono::Utc::now().to_rfc3339();
+    let _now = chrono::Utc::now().to_rfc3339();
     
         conn.execute(
         "INSERT INTO parametres (id, nom_pharmacie, adresse, telephone, email, devise, tva, logo_url, en_tete_ticket, pied_ticket, updated_at)
@@ -389,5 +443,52 @@ pub fn migrate_parametres(conn: &Connection) -> Result<(), AppError> {
         println!("✅ Migration : colonne 'logo_url' ajoutée à la table 'parametres'");
     }
 
+    Ok(())
+}
+
+/// Migre les produits existants vers la gestion par lots.
+/// Chaque produit actuel devient UN lot avec son stock et sa date actuels.
+/// Idempotent : ne fait rien si le produit a déjà au moins un lot.
+pub fn migrate_produits_vers_lots(conn: &Connection) -> Result<(), AppError> {
+    // Récupère tous les produits qui n'ont pas encore de lot
+    let mut stmt = conn.prepare(
+        "SELECT p.id, p.nom, p.stock, p.prix_achat, 
+                COALESCE(p.date_peremption, date('now', '+1 year'))
+         FROM produits p
+         WHERE NOT EXISTS (SELECT 1 FROM lots l WHERE l.produit_id = p.id)"
+    )?;
+
+    let produits = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,   // id
+            row.get::<_, String>(1)?,   // nom
+            row.get::<_, i64>(2)?,      // stock
+            row.get::<_, f64>(3)?,      // prix_achat
+            row.get::<_, String>(4)?,   // date_peremption
+        ))
+    })?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+    let mut count = 0;
+
+    for row in produits {
+        let (id, nom, stock, prix_achat, date_peremption) = row?;
+        
+        // Créer un lot initial avec le stock actuel
+        let lot_id = format!("LOT-{}", &uuid::Uuid::new_v4().to_string()[..6].to_uppercase());
+        let numero_lot = format!("INIT-{}", &id.replace("-", "").chars().take(6).collect::<String>());
+
+        conn.execute(
+            "INSERT INTO lots (id, produit_id, numero_lot, quantite, date_peremption, prix_achat, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![lot_id, id, numero_lot, stock, date_peremption, prix_achat, now],
+        )?;
+        
+        count += 1;
+    }
+
+    if count > 0 {
+        println!("✅ Migration : {} produits migrés vers la gestion par lots", count);
+    }
     Ok(())
 }

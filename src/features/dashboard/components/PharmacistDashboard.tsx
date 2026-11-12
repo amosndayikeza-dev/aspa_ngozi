@@ -1,6 +1,11 @@
+// src/features/dashboard/pages/DashboardPage.tsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
-import { DollarSign, TrendingUp, Users, ShoppingCart, Activity } from 'lucide-react';
+import { 
+  DollarSign, TrendingUp, Users, ShoppingCart, Activity, 
+  Wallet, AlertTriangle, Receipt, ArrowRight, Package
+} from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell 
@@ -8,10 +13,11 @@ import {
 import { statsApi } from '../api/statsApi';
 import { KpiCard } from '../components/KpiCard';
 import { TopProductsWidget } from '../components/TopProductsWidget'; 
-import type { User } from '@/features/auth/types';
+import { cn } from '@/shared/lib/cn';
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,40 +45,70 @@ export function DashboardPage() {
             Bonjour <span className="font-semibold text-slate-700">{user?.nom}</span>, voici l'activité d'aujourd'hui.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-          <Activity className="w-3.5 h-3.5 text-emerald-500" /> Données en temps réel
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/vente/historique')}
+            className="h-8 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+          >
+            <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+            Voir l'historique
+            <ArrowRight className="w-3 h-3 text-slate-400" />
+          </button>
+
+          <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+            <Activity className="w-3.5 h-3.5 text-emerald-500" /> Données en temps réel
+          </div>
         </div>
       </div>
 
-      {/* --- GRILLE BENTO (KPI Cards) --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard 
-          title="Chiffre d'Affaires (Jour)" 
-          value={data.kpis.caJour} 
-          unit="FBU" 
-          icon={DollarSign} 
-          trend={{ value: '+12%', isPositive: true }} 
-        />
-        <KpiCard 
-          title="Bénéfice estimé (Mois)" 
-          value={data.kpis.beneficeMois} 
-          unit="FBU" 
-          icon={TrendingUp} 
-          trend={{ value: '+8%', isPositive: true }} 
-        />
-        <KpiCard 
-          title="Clients servis (Jour)" 
-          value={data.kpis.clientsServis} 
-          icon={Users} 
-          trend={{ value: '-2%', isPositive: false }} 
-        />
-        <KpiCard 
-          title="Ventes (7 derniers jours)" 
-          value={data.kpis.caSemaine} 
-          unit="FBU" 
-          icon={ShoppingCart} 
-          variant="dark" // <-- Utilisation de la variante sombre pour le design Bento
-        />
+      {/* --- LE KPI STRIP (8 CARTES SUR UNE SEULE LIGNE EN XL) --- */}
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2">
+        
+        <KpiCard compact title="CA (Jour)" value={data.kpis.caJour} unit="FBU" icon={DollarSign} />
+        <KpiCard compact title="Bénéf. (Mois)" value={data.kpis.beneficeMois} unit="FBU" icon={TrendingUp} />
+        <KpiCard compact title="Clients (Jour)" value={data.kpis.clientsServis} icon={Users} />
+        <KpiCard compact title="Ventes (7j)" value={data.kpis.caSemaine} unit="FBU" icon={ShoppingCart} />
+
+        <KpiCard compact title="Valeur Stock" value={data.valeurStock || 0} unit="FBU" icon={Package} />
+
+        {/* Carte "Stock périmé" harmonisée (style alerte compact) */}
+        <div className="relative p-2.5 rounded-xl border border-rose-200 bg-rose-50 shadow-sm flex flex-col justify-between overflow-hidden transition-all hover:shadow-md">
+          <div className="flex justify-between items-start relative z-10">
+            <div className="p-1.5 rounded-lg bg-rose-100 text-rose-600">
+              <Package className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="mt-2 relative z-10">
+            <p className="text-[10px] font-medium text-rose-700 truncate">Stock périmé</p>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <p className="text-base font-bold tracking-tight text-rose-700">
+                {(data.valeurStockPerime || 0).toLocaleString('fr-FR')}
+              </p>
+              <span className="text-[9px] font-medium text-rose-500">FBU</span>
+            </div>
+          </div>
+        </div>
+
+        <KpiCard compact title="Créances" value={data.totalCreances || 0} unit="FBU" icon={Wallet} variant="dark" />
+
+        {/* Carte "Dettes en retard" harmonisée (style alerte compact) */}
+        <div className="relative p-2.5 rounded-xl border border-rose-200 bg-rose-50 shadow-sm flex flex-col justify-between overflow-hidden transition-all hover:shadow-md">
+          <div className="flex justify-between items-start relative z-10">
+            <div className="p-1.5 rounded-lg bg-rose-100 text-rose-600">
+              <AlertTriangle className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="mt-2 relative z-10">
+            <p className="text-[10px] font-medium text-rose-700 truncate">Dettes retard</p>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <p className="text-base font-bold tracking-tight text-rose-700">
+                {data.nbDettesRetard || 0}
+              </p>
+              <span className="text-[9px] font-medium text-rose-500">client(s)</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* --- LIGNE DES GRAPHIQUES --- */}
@@ -82,6 +118,12 @@ export function DashboardPage() {
         <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/90 shadow-sm p-4 flex flex-col">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-sm font-bold text-slate-900">Évolution des ventes</h2>
+            <button
+              onClick={() => navigate('/vente/historique')}
+              className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              Voir tout <ArrowRight className="w-3 h-3" />
+            </button>
           </div>
           <div className="flex-1 min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -120,7 +162,7 @@ export function DashboardPage() {
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value: any, name: any, item: any, index: number, payload: any) => `${value.toLocaleString('fr-FR')} FBU`}
+                  formatter={(value: any) => `${value.toLocaleString('fr-FR')} FBU`}
                   contentStyle={{ borderRadius: '8px', border: 'none', fontSize: '11px' }}
                 />
               </PieChart>
@@ -140,7 +182,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* --- TABLEAU TOP PRODUITS (Composant externe) --- */}
+      {/* --- TABLEAU TOP PRODUITS --- */}
       <TopProductsWidget products={data.topProduits} />
 
     </div>

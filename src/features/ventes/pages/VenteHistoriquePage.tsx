@@ -4,7 +4,6 @@ import { ArrowLeft, Receipt, Eye, Clock, X, User } from 'lucide-react';
 import { venteApi } from '../api/venteApi';
 import { useAuth } from '@/features/auth';
 import { toast } from 'sonner';
-import { cn } from '@/shared/lib/cn';
 
 export function VenteHistoriquePage() {
   const navigate = useNavigate();
@@ -102,41 +101,70 @@ export function VenteHistoriquePage() {
       {/* MODALE DÉTAIL */}
       {selectedVente && (
         <>
-          <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40" onClick={() => setSelectedVente(null)} />
+          <div
+            className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40"
+            onClick={() => setSelectedVente(null)}
+          />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full pointer-events-auto">
-              <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full pointer-events-auto max-h-[90vh] flex flex-col">
+              <div className="p-4 border-b border-slate-100 flex justify-between items-center shrink-0">
                 <h2 className="text-sm font-bold text-slate-900">Détail de la vente</h2>
-                <button onClick={() => setSelectedVente(null)} className="text-slate-400 hover:text-slate-700">
+                <button
+                  onClick={() => setSelectedVente(null)}
+                  className="text-slate-400 hover:text-slate-700"
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              
-              <div className="p-4 space-y-3 font-mono text-xs">
+
+              <div className="p-4 space-y-3 font-mono text-xs overflow-y-auto">
                 <div className="text-center pb-3 border-b border-dashed border-slate-300">
                   <p className="font-bold uppercase">Ticket {selectedVente.id}</p>
                   <p className="text-[10px] text-slate-500">{selectedVente.dateVente}</p>
                 </div>
-                
+
                 <div className="space-y-1 text-slate-600">
-                  <p className="flex items-center gap-1"><User className="w-3 h-3" /> Client : <span className="font-bold text-slate-900">{selectedVente.clientNom}</span></p>
-                  <p className="flex items-center gap-1"><Clock className="w-3 h-3" /> Vendeur : <span className="font-bold text-slate-900">{selectedVente.userNom}</span></p>
+                  <p className="flex items-center gap-1">
+                    <User className="w-3 h-3" /> Client :{' '}
+                    <span className="font-bold text-slate-900">{selectedVente.clientNom}</span>
+                  </p>
+                  <p className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> Vendeur :{' '}
+                    <span className="font-bold text-slate-900">{selectedVente.userNom}</span>
+                  </p>
                 </div>
-                
-                <div className="border-t border-dashed border-slate-300 pt-2 space-y-1">
+
+                {/* ✅ Lignes avec numéro de lot (traçabilité FEFO) */}
+                <div className="border-t border-dashed border-slate-300 pt-2 space-y-2">
                   {selectedVente.lignes.map((l: any, i: number) => (
-                    <div key={i} className="flex justify-between">
-                      <span>{l.quantite}× {l.nomProduit}</span>
-                      <span className="font-bold">{l.sousTotal.toLocaleString('fr-FR')}</span>
+                    <div key={i} className="flex justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-slate-900">
+                          <span className="font-bold">{l.quantite}×</span> {l.nomProduit}
+                        </p>
+                        {l.numeroLot && (
+                          <p className="text-[9px] text-slate-400 mt-0.5">
+                            Lot : <span className="font-semibold">{l.numeroLot}</span>
+                          </p>
+                        )}
+                        <p className="text-[9px] text-slate-400">
+                          @ {l.prixUnitaire.toLocaleString('fr-FR')} FBU / u
+                        </p>
+                      </div>
+                      <span className="font-bold text-slate-900 shrink-0">
+                        {l.sousTotal.toLocaleString('fr-FR')}
+                      </span>
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="border-t border-slate-300 pt-2 flex justify-between text-sm font-bold">
                   <span>TOTAL</span>
-                  <span className="text-emerald-700">{selectedVente.total.toLocaleString('fr-FR')} FBU</span>
+                  <span className="text-emerald-700">
+                    {selectedVente.total.toLocaleString('fr-FR')} FBU
+                  </span>
                 </div>
-                
+
                 <p className="text-center text-[10px] text-slate-400 pt-2">
                   Payé par {selectedVente.modePaiement}
                 </p>

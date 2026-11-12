@@ -42,7 +42,7 @@ pub fn init_db(app: &AppHandle) -> Result<Connection, AppError> {
     schema::seed_default_animaux(&conn)?;
     schema::seed_default_fournisseurs(&conn)?;
     schema::seed_default_parametres(&conn)?; 
-
+    schema::migrate_produits_vers_lots(&conn)?;
 
     Ok(conn)
 }

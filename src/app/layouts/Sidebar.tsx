@@ -1,11 +1,12 @@
 // src/app/layouts/Sidebar.tsx
 import { NavLink } from 'react-router-dom';
+import { useState, useEffect } from 'react';                          // 👈 NOUVEAU
 import { useAuth } from '@/features/auth';
 import { NAVIGATION_SECTIONS } from '@/config/navigation';
+import { detteApi } from '@/features/dettes/api/detteApi';            // 👈 NOUVEAU
 import { cn } from '@/shared/lib/cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-// 1. Définition des props
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
@@ -13,6 +14,25 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const { user } = useAuth();
+  
+  // 👈 NOUVEAU : État pour le nombre de dettes en retard
+  const [nbRetards, setNbRetards] = useState(0);
+
+  // 👈 NOUVEAU : Chargement initial + polling toutes les 60s
+  useEffect(() => {
+    if (!user) return;
+    
+    const loadRetards = () => {
+      detteApi.getNbDettesRetard()
+        .then(setNbRetards)
+        .catch(() => setNbRetards(0));  // silencieux en cas d'erreur
+    };
+    
+    loadRetards();
+    const interval = setInterval(loadRetards, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   if (!user) return null;
 
   const filteredSections = NAVIGATION_SECTIONS.map((section) => ({
@@ -27,7 +47,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         isOpen ? "w-[240px]" : "w-[68px]"
       )}
     >
-      {/* --- BOUTON TOGGLE ÉPURÉ --- */}
+      {/* --- BOUTON TOGGLE --- */}
       <button
         onClick={onToggle}
         className="absolute -right-2.5 top-5 w-5 h-5 bg-[#141E33] border border-white/20 text-slate-300 rounded-full flex items-center justify-center shadow-lg hover:text-white hover:border-emerald-400 hover:scale-110 transition-all z-50 cursor-pointer"
@@ -36,7 +56,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         {isOpen ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
       </button>
 
-      {/* --- EN-TÊTE / LOGO PHARMACIE --- */}
+      {/* --- EN-TÊTE --- */}
       <div className={cn(
         "h-14 flex items-center border-b border-white/[0.06] transition-all duration-300 overflow-hidden shrink-0",
         isOpen ? "px-4 gap-2.5" : "justify-center px-0"
@@ -63,7 +83,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
         )}
       </div>
 
-      {/* --- NAVIGATION ULTRA-DENSE --- */}
+      {/* --- NAVIGATION --- */}
       <nav className="flex-1 overflow-y-auto no-scrollbar py-3 px-2 space-y-4">
         {filteredSections.map((section, idx) => (
           <div key={idx}>
@@ -76,51 +96,72 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             )}
             
             <ul className="space-y-1">
-              {section.items.map((item) => (
-                <li key={item.path}>
-                  <NavLink
-                    to={item.path}
-                    title={!isOpen ? item.label : undefined}
-                    className={({ isActive }) =>
-                      cn(
-                        'group flex items-center rounded-lg text-xs font-medium transition-all duration-150 relative',
-                        isOpen ? 'px-2.5 py-2' : 'justify-center py-2 px-0',
-                        isActive
-                          ? 'bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-transparent text-emerald-300 border border-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.08)]'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        {/* Barre lumineuse verticale pour l'état actif */}
-                        {isActive && (
-                          <span className={cn(
-                            "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]",
-                            !isOpen && "left-0.5"
-                          )} />
-                        )}
-                        <item.icon className={cn(
-                          "w-4 h-4 shrink-0 transition-colors",
-                          isActive ? "text-emerald-400" : "text-slate-400 group-hover:text-slate-200",
-                          isOpen ? "mr-2.5" : "mr-0"
-                        )} />
-                        {isOpen && (
-                          <span className="whitespace-nowrap truncate tracking-tight text-[11px]">
-                            {item.label}
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </NavLink>
-                </li>
-              ))}
+              {section.items.map((item) => {
+                // 👈 NOUVEAU : est-ce l'item Dettes ?
+                const isDettes = item.path === '/dettes';
+                const hasRetards = isDettes && nbRetards > 0;
+
+                return (
+                  <li key={item.path}>
+                    <NavLink
+                      to={item.path}
+                      title={!isOpen ? item.label : undefined}
+                      className={({ isActive }) =>
+                        cn(
+                          'group flex items-center rounded-lg text-xs font-medium transition-all duration-150 relative',
+                          isOpen ? 'px-2.5 py-2' : 'justify-center py-2 px-0',
+                          isActive
+                            ? 'bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-transparent text-emerald-300 border border-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.08)]'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                        )
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          {isActive && (
+                            <span className={cn(
+                              "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]",
+                              !isOpen && "left-0.5"
+                            )} />
+                          )}
+                          
+                          <div className="relative shrink-0">
+                            <item.icon className={cn(
+                              "w-4 h-4 shrink-0 transition-colors",
+                              isActive ? "text-emerald-400" : "text-slate-400 group-hover:text-slate-200",
+                              isOpen ? "mr-2.5" : "mr-0"
+                            )} />
+                            {/* 👈 NOUVEAU : Pastille rouge sur l'icône quand la sidebar est réduite */}
+                            {hasRetards && !isOpen && (
+                              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-brand-obsidian animate-pulse" />
+                            )}
+                          </div>
+
+                          {isOpen && (
+                            <>
+                              <span className="whitespace-nowrap truncate tracking-tight text-[11px] flex-1">
+                                {item.label}
+                              </span>
+                              {/* 👈 NOUVEAU : Badge numérique quand la sidebar est ouverte */}
+                              {hasRetards && (
+                                <span className="ml-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
+                                  {nbRetards}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
       </nav>
 
-      {/* --- PROFIL UTILISATEUR COMPACT --- */}
+      {/* --- PROFIL --- */}
       <div className="p-2 border-t border-white/[0.06] shrink-0">
         <div className={cn(
           "bg-[#101827] border border-white/[0.06] rounded-xl flex items-center transition-all",

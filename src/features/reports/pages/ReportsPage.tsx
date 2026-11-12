@@ -45,10 +45,20 @@ export function ReportPage() {
     const handleExport = async () => {
         try {
             const path = await callBackend<string>('export_ventes_csv');
-            toast.success(`Exporté sur le bureau : ${path}`);
-        } catch (e) {
-            console.error(e);
-            toast.error("Erreur d'export");
+            console.log("✅ Export réussi :", path);
+            
+            // Toast avec titre court + description fixe
+            toast.success("Export CSV réussi", {
+                description: "Le fichier est sur votre Bureau.",
+                duration: 6000,
+            });
+        } catch (e: any) {
+            console.error("❌ Erreur export :", e);
+            const message = typeof e === 'string' ? e : e?.message || "Erreur inconnue";
+            toast.error("Erreur d'export", {
+                description: message.substring(0, 100), // limite la taille
+                duration: 6000,
+            });
         }
     };
 
@@ -157,7 +167,7 @@ export function ReportPage() {
                                 <Tooltip 
                                     cursor={{ fill: '#f8fafc' }}
                                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
-                                    formatter={(value: number) => `${value.toLocaleString('fr-FR')} FBU`}
+                                    formatter={(value: any) => `${Number(value ?? 0).toLocaleString('fr-FR')} FBU`}
                                 />
                                 <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                                 <Bar dataKey="revenus" name="Revenus" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />

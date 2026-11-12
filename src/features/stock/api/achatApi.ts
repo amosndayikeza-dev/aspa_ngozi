@@ -32,22 +32,20 @@ export const achatApi = {
     return callBackend<void>('delete_fournisseur', { id });
   },
 
-    /**
-   * Crée un bon de commande (Achat).
-   * Le backend Rust va automatiquement augmenter le stock des produits.
+     /**
+   * Crée un bon de commande. Pour chaque ligne, un lot est créé avec
+   * sa propre date de péremption.
    */
-  createAchat: async (data: any): Promise<any> => {
-    // ✅ On traduit les données de React (medicamentId, prixAchatUnitaire) 
-    // vers les données attendues par Rust (produitId, prixUnitaire)
-    const rustPayload = {
-      fournisseurId: data.fournisseurId,
-      lignes: data.lignes.map((l: any) => ({
-        produitId: l.medicamentId,
-        quantite: l.quantite,
-        prixUnitaire: l.prixAchatUnitaire
-      }))
-    };
-
-    return callBackend<any>('create_achat', { data: rustPayload });
-  }
+  createAchat: async (data: {
+    fournisseurId: string;
+    lignes: {
+      produitId: string;
+      numeroLot: string;         
+      quantite: number;
+      prixUnitaire: number;
+      datePeremption: string;   
+    }[];
+  }): Promise<any> => {
+    return callBackend<any>('create_achat', { data });
+  },
 };

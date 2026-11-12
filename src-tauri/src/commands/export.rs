@@ -5,7 +5,6 @@ use tauri::{State, AppHandle, Manager};
 
 #[tauri::command]
 pub fn export_ventes_csv(state: State<'_, AppState>, app: AppHandle) -> Result<String, String> {
-    // On sauvegarde le fichier sur le Bureau de l'utilisateur
     let desktop_path = app.path().desktop_dir()
         .map_err(|e| format!("Dossier introuvable: {}", e))?
         .join("ventes_vetpharma.csv");

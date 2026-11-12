@@ -7,7 +7,7 @@ export interface LignePanier{
 }
 
 /** ----- le mode de paiement d'une vente finalise */
-export type ModePaiement = 'Espèces' | 'Credit' ;
+export type ModePaiement = 'Espèces' | 'Mobile Money' | 'Carte Bancaire' | 'Crédit';
 
 /** la structure d'une vente finalise */
 export interface vente{

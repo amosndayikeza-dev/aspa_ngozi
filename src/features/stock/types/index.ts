@@ -17,6 +17,8 @@ export interface Lot{
     numeroLot:string;
     quantite: number;
     datePeremption: string; 
+    joursRestants?: number;   
+    statut?: string;  
 }
 
 /**
@@ -26,7 +28,7 @@ export interface Lot{
 export interface Medicament {
     id: string;
     nom: string;
-    dci: string // Denomination Commune Internationale
+    dci: string 
     categorie: CategorieMedicament;
     forme: FormeMedicament;
     prixAchat: number;
@@ -34,6 +36,11 @@ export interface Medicament {
     seuilAlerte: number;
     lots: Lot[];
     imageUrl?: string;
+    stock?: number;           // Stock total (tous lots)
+    stockValide?: number;     // Stock vendable (hors périmés)
+    stockPerime?: number;     // Stock à jeter
+    datePeremption?: string;
+  
 }
 
 /** Représente un fournisseur */
@@ -48,6 +55,8 @@ export interface Fournisseur {
 export interface LigneAchat {
   medicamentId: string;
   nomMedicament: string;
+  numeroLot: string;
   quantite: number;
   prixAchatUnitaire: number;
+  datePeremption: string;
 }

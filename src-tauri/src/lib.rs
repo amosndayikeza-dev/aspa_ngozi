@@ -100,6 +100,22 @@ pub fn run() {
             // Phase 13 — Audit
             commands::audit::get_audit_logs,
             commands::audit::create_audit_log,
+        
+            // Module Dettes
+            commands::dettes::list_dettes,
+            commands::dettes::get_dette,
+            commands::dettes::enregistrer_paiement_dette,
+            commands::dettes::list_paiements_dette,
+            commands::dettes::get_total_creances,
+            commands::dettes::get_total_du_by_client,
+            commands::dettes::get_nb_dettes_retard,
+
+            //Lots
+            commands::lots::list_lots_by_produit,
+            commands::lots::create_lot,
+            commands::lots::update_lot,
+            commands::lots::delete_lot,
+            commands::lots::ajuster_lot_inventaire,
         ])
         .run(tauri::generate_context!())
         .expect("Erreur fatale au lancement de Tauri");

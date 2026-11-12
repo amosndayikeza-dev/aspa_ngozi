@@ -6,10 +6,10 @@ import type { Medicament } from '@/features/stock/types';
 import type { Client, Animal } from '@/features/clients/types';
 import { clientApi } from '@/features/clients/api/clientApi';
 import { animalApi } from '@/features/clients/api/animalApi';
-import { venteApi } from '../api/venteApi'; // 👈 Import de l'API de vente
+import { venteApi } from '../api/venteApi';
 import { toast } from 'sonner';
 import { Modal } from '@/shared/ui/Modal';
-import { CreditCard, Banknote, Smartphone, CheckCircle2, User, PawPrint } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone, CheckCircle2, User, PawPrint, Wallet, Calendar } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useAuth } from '@/features/auth';
 
@@ -20,28 +20,46 @@ export function POSPage() {
   const [modePaiement, setModePaiement] = useState<ModePaiement>('Espèces');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // ✅ États pour le client et l'animal
+  // --- États client & animal ---
   const [clients, setClients] = useState<Client[]>([]);
   const [animaux, setAnimaux] = useState<Animal[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedAnimalId, setSelectedAnimalId] = useState<string>('');
 
-  // ✅ Charger les clients au démarrage
+  // --- États crédit ---
+  const [montantVerse, setMontantVerse] = useState<number>(0);
+  const [modeVersement, setModeVersement] = useState<string>('Espèces');
+  const [dateEcheance, setDateEcheance] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split('T')[0];
+  });
+
+  // --- Charger les clients au démarrage ---
   useEffect(() => {
     clientApi.getClients().then(setClients).catch(console.error);
   }, []);
 
-  // ✅ Charger les animaux quand on sélectionne un client
+  // --- Charger les animaux quand un client est sélectionné ---
   useEffect(() => {
     if (selectedClientId) {
       animalApi.getAnimauxByClient(selectedClientId)
         .then(setAnimaux)
         .catch(console.error);
-      setSelectedAnimalId(''); // Reset l'animal
+      setSelectedAnimalId('');
     } else {
       setAnimaux([]);
     }
   }, [selectedClientId]);
+
+  // --- Reset les champs de crédit quand on ferme la modale ---
+  useEffect(() => {
+    if (!isPaymentModalOpen) {
+      setMontantVerse(0);
+      setModeVersement('Espèces');
+      setModePaiement('Espèces');
+    }
+  }, [isPaymentModalOpen]);
 
   // --- LOGIQUE DU PANIER ---
   const handleAddToCart = (med: Medicament) => {
@@ -70,39 +88,57 @@ export function POSPage() {
     setPanier((prev) => prev.filter(l => l.medicament.id !== medId));
   };
 
-  // --- VALIDATION DE LA VENTE ---
+  // --- VALIDATION ---
   const total = panier.reduce((acc, ligne) => acc + (ligne.medicament.prixVente * ligne.quantite), 0);
+  const resteACredit = Math.max(0, total - montantVerse);
 
   const handleConfirmPayment = async () => {
     if (!selectedClientId) {
       toast.error("Veuillez sélectionner un client pour valider la vente.");
       return;
     }
-
     if (!user) {
       toast.error("Utilisateur non authentifié. Veuillez vous reconnecter.");
       return;
     }
 
+    // Validations spécifiques au crédit
+    if (modePaiement === 'Crédit') {
+      if (montantVerse < 0 || montantVerse > total) {
+        toast.error("Le montant versé est invalide.");
+        return;
+      }
+      if (!dateEcheance) {
+        toast.error("Veuillez choisir une date d'échéance.");
+        return;
+      }
+    }
+
     setIsProcessing(true);
     try {
-      // Simulation de l'utilisateur connecté (à remplacer par ton contexte d'auth si tu en as un)
-      const currentUserId = '1'; // Rakoto Jean (Pharmacien)
-
-      // ✅ Appel réel au backend Rust
       await venteApi.createVente({
         clientId: selectedClientId,
         animalId: selectedAnimalId || null,
-        userId: user.id, // 👈 Remplace le '1' codé en dur
+        userId: user.id,
         modePaiement: modePaiement,
         lignes: panier.map(l => ({
           produitId: l.medicament.id,
           quantite: l.quantite,
-          prixUnitaire: l.medicament.prixVente
-        }))
+          prixUnitaire: l.medicament.prixVente,
+        })),
+        // ✅ Envoi des infos de crédit (null si vente comptant)
+        credit: modePaiement === 'Crédit' ? {
+          montantVerse,
+          modeVersement,
+          dateEcheance,
+        } : null,
       });
 
-      toast.success(`Vente de ${total.toLocaleString('fr-FR')} FBU encaissée en ${modePaiement} !`);
+      const message = modePaiement === 'Crédit'
+        ? `Vente à crédit de ${total.toLocaleString('fr-FR')} FBU enregistrée. Reste à payer : ${resteACredit.toLocaleString('fr-FR')} FBU.`
+        : `Vente de ${total.toLocaleString('fr-FR')} FBU encaissée en ${modePaiement} !`;
+
+      toast.success(message);
       setPanier([]);
       setIsPaymentModalOpen(false);
       setSelectedClientId('');
@@ -132,7 +168,7 @@ export function POSPage() {
         </div>
       </div>
 
-      {/* MODALE DE PAIEMENT ENCAISSEMENT */}
+      {/* MODALE DE PAIEMENT */}
       <div className="print:hidden">
         <Modal
           isOpen={isPaymentModalOpen}
@@ -144,7 +180,7 @@ export function POSPage() {
         >
           <div className="space-y-3.5 select-none">
             
-            {/* ✅ SÉLECTION DU CLIENT ET DE L'ANIMAL */}
+            {/* SÉLECTION DU CLIENT ET DE L'ANIMAL */}
             <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
@@ -162,7 +198,6 @@ export function POSPage() {
                 </select>
               </div>
 
-              {/* Affiché seulement si le client a des animaux */}
               {selectedClientId && animaux.length > 0 && (
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
@@ -182,7 +217,7 @@ export function POSPage() {
               )}
             </div>
 
-            {/* Montant total à encaisser */}
+            {/* MONTANT TOTAL */}
             <div className="bg-emerald-50/70 p-3 rounded-xl text-center border border-emerald-200/70 shadow-2xs">
               <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-0.5">
                 Montant Net à Encaisser
@@ -192,14 +227,15 @@ export function POSPage() {
               </p>
             </div>
 
-            {/* Choix du mode de paiement */}
+            {/* MODE DE PAIEMENT */}
             <div className="space-y-1.5">
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mode de règlement</p>
               <div className="space-y-1.5">
                 {[
                   { id: 'Espèces', icon: Banknote },
                   { id: 'Mobile Money', icon: Smartphone },
-                  { id: 'Carte Bancaire', icon: CreditCard }
+                  { id: 'Carte Bancaire', icon: CreditCard },
+                  { id: 'Crédit', icon: Wallet },
                 ].map((mode) => (
                   <button
                     key={mode.id}
@@ -219,7 +255,84 @@ export function POSPage() {
               </div>
             </div>
 
-            {/* Boutons d'action */}
+            {/* CHAMPS CRÉDIT (uniquement si mode Crédit) */}
+            {modePaiement === 'Crédit' && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2.5">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                  <Calendar className="w-3 h-3" />
+                  Détails du crédit
+                </div>
+
+                {/* Montant versé */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-amber-700">Montant versé maintenant (FBU)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={total}
+                    value={montantVerse}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setMontantVerse(Math.max(0, Math.min(total, val)));
+                    }}
+                    className="w-full h-8 px-2 bg-white border border-amber-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  />
+                  <div className="flex gap-1 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setMontantVerse(0)}
+                      className="text-[9px] px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-semibold cursor-pointer"
+                    >
+                      Rien (crédit total)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMontantVerse(total)}
+                      className="text-[9px] px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-semibold cursor-pointer"
+                    >
+                      Tout payer
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mode du versement */}
+                {montantVerse > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-amber-700">Mode de paiement de l'acompte</label>
+                    <select
+                      value={modeVersement}
+                      onChange={(e) => setModeVersement(e.target.value)}
+                      className="w-full h-8 px-2 bg-white border border-amber-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                    >
+                      <option value="Espèces">Espèces</option>
+                      <option value="Mobile Money">Mobile Money</option>
+                      <option value="Carte Bancaire">Carte Bancaire</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Date d'échéance */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-amber-700">Date d'échéance</label>
+                  <input
+                    type="date"
+                    value={dateEcheance}
+                    onChange={(e) => setDateEcheance(e.target.value)}
+                    className="w-full h-8 px-2 bg-white border border-amber-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  />
+                </div>
+
+                {/* Récap reste à crédit */}
+                <div className="pt-2 border-t border-amber-200 flex justify-between items-center">
+                  <span className="text-[10px] font-semibold text-amber-700">Reste à crédit :</span>
+                  <span className="text-sm font-bold text-amber-900 font-mono">
+                    {resteACredit.toLocaleString('fr-FR')} FBU
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* BOUTONS */}
             <div className="pt-2 border-t border-slate-100 flex gap-2">
               <button 
                 onClick={() => setIsPaymentModalOpen(false)}
@@ -232,7 +345,7 @@ export function POSPage() {
                 disabled={isProcessing || !selectedClientId}
                 className="flex-1 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-all shadow-2xs border border-emerald-600 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                {isProcessing ? 'Validation...' : 'Valider & Encaisser'}
+                {isProcessing ? 'Validation...' : (modePaiement === 'Crédit' ? 'Enregistrer à crédit' : 'Valider & Encaisser')}
               </button>
             </div>
           </div>

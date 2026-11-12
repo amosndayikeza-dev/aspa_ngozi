@@ -11,6 +11,7 @@ import {
  } from "lucide-react";
 import type { UserRole } from '@/features/auth';
 import { path } from "@tauri-apps/api";
+import { Wallet } from "lucide-react";
 
 export interface NavItem{
     label: string;
@@ -81,6 +82,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
                 icon: BarChart3,
                 allowedRoles: ['PHARMACIEN'],
             },
+            {
+                label: 'Dettes & Creances',
+                path: '/dettes',
+                icon: Wallet,
+                allowedRoles: ['PHARMACIEN', 'VENDEUR'],
+            }
         ],
     },
     {

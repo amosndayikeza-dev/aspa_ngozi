@@ -4,6 +4,7 @@ export const venteApi = {
   /**
    * Enregistre une nouvelle vente.
    * @param data Doit contenir : clientId, animalId (optionnel), userId, modePaiement, lignes[]
+   *             + credit (optionnel) si mode = 'Crédit'
    */
   createVente: async (data: {
     clientId: string;
@@ -11,6 +12,11 @@ export const venteApi = {
     userId: string;
     modePaiement: string;
     lignes: { produitId: string; quantite: number; prixUnitaire: number }[];
+    credit?: {
+      montantVerse: number;
+      modeVersement: string;
+      dateEcheance: string;
+    } | null;  
   }) => {
     return callBackend<any>('create_vente', { data });
   },
@@ -22,7 +28,7 @@ export const venteApi = {
     return callBackend<any[]>('list_ventes');
   },
 
-    /**
+  /**
    * Récupère l'historique des ventes d'un vendeur.
    */
   getVentesByUser: async (userId: string): Promise<any[]> => {
