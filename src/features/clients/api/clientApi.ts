@@ -9,11 +9,17 @@ const mapClient = (c: any): Client => ({
   dateInscription: c.createdAt || new Date().toISOString(),
   // ✅ On crée un tableau de la taille de `animauxCount` (envoyé par Rust)
   // Cela permet à `client.animaux.length` d'afficher le bon nombre dans la liste.
-  animaux: Array.from({ length: c.animauxCount || 0 }).map((_, i) => ({ 
+  animaux: Array.from({ length: c.animauxCount || 0 }).map((_, i) => ({
     id: `virtual-${i}`,
+    clientId: c.id,
     nom: 'Chargement...',
-    espece: ''
-  } as Animal)),
+    espece: '',
+    race: null,
+    sexe: null,
+    dateNaissance: null,
+    poidsKg: null,
+    createdAt: new Date().toISOString(),
+  } as unknown as Animal)),
 });
 
 export const clientApi = {

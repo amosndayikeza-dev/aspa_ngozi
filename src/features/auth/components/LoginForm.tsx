@@ -1,6 +1,5 @@
-// src/features/auth/components/LoginForm.tsx
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom'; // <-- 1. AJOUT IMPORT
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '@/shared/lib/cn';
@@ -13,7 +12,7 @@ export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { login } = useAuth();
-  const navigate = useNavigate(); // <-- 2. INITIALISATION
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -22,10 +21,7 @@ export function LoginForm() {
 
     try {
       await login({ email, password });
-      
-      // 3. LA REDIRECTION MAGIQUE
-      navigate('/dashboard'); 
-      
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -34,28 +30,34 @@ export function LoginForm() {
   };
 
   return (
-    <div className="bg-white/90 backdrop-blur-xl border border-white/50 rounded-3xl shadow-2xl p-8 md:p-10 text-gray-800">
+    /* 
+      CARTE DE CONNEXION (Style Antigravity)
+      - Fond blanc pur avec bordure slate très fine.
+      - Ombre douce et coins arrondis standards (rounded-2xl).
+      - Padding compact (p-6 md:p-8).
+    */
+    <div className="bg-white border border-slate-200/90 shadow-xl rounded-2xl p-6 md:p-8 text-slate-900 w-full max-w-sm">
       
       {/* --- Titre --- */}
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-brand-dark">
+      <div className="text-center mb-6">
+        <h1 className="text-xl font-bold text-slate-900">
           Connexion
         </h1>
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="text-xs text-slate-500 mt-1">
           Accédez à votre espace Aspa Ngozi
         </p>
       </div>
 
       {/* --- Formulaire --- */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         
         {/* Champ Email */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="email" className="text-xs font-semibold text-gray-600">
+          <label htmlFor="email" className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
             Adresse email
           </label>
           <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-medium" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               id="email"
               type="email"
@@ -65,10 +67,10 @@ export function LoginForm() {
               required
               autoComplete="email"
               className={cn(
-                'w-full h-11 rounded-xl bg-gray-50 pl-11 pr-4',
-                'text-sm text-gray-800 placeholder:text-gray-400',
-                'border border-gray-200',
-                'transition-all focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark'
+                'w-full h-10 rounded-lg bg-slate-50 pl-10 pr-3',
+                'text-xs text-slate-800 placeholder:text-slate-400',
+                'border border-slate-200',
+                'transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
               )}
             />
           </div>
@@ -76,11 +78,11 @@ export function LoginForm() {
 
         {/* Champ Mot de passe */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="password" className="text-xs font-semibold text-gray-600">
+          <label htmlFor="password" className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
             Mot de passe
           </label>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-medium" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
@@ -90,16 +92,16 @@ export function LoginForm() {
               required
               autoComplete="current-password"
               className={cn(
-                'w-full h-11 rounded-xl bg-gray-50 pl-11 pr-11',
-                'text-sm text-gray-800 placeholder:text-gray-400',
-                'border border-gray-200',
-                'transition-all focus:outline-none focus:ring-2 focus:ring-brand-dark/20 focus:border-brand-dark'
+                'w-full h-10 rounded-lg bg-slate-50 pl-10 pr-10',
+                'text-xs text-slate-800 placeholder:text-slate-400',
+                'border border-slate-200',
+                'transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
               )}
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-dark transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
               tabIndex={-1}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -108,10 +110,10 @@ export function LoginForm() {
         </div>
 
         {/* Lien mot de passe oublié */}
-        <div className="flex justify-end mt-1">
+        <div className="flex justify-end mt-0.5">
           <button
             type="button"
-            className="text-xs font-semibold text-brand-medium hover:text-brand-dark transition-colors"
+            className="text-[11px] font-semibold text-slate-500 hover:text-emerald-600 transition-colors"
           >
             Mot de passe oublié ?
           </button>
@@ -119,8 +121,8 @@ export function LoginForm() {
 
         {/* Message d'erreur */}
         {error && (
-          <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-            <p className="text-xs text-vet-danger font-medium">{error}</p>
+          <div className="bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">
+            <p className="text-xs text-rose-600 font-medium">{error}</p>
           </div>
         )}
 
@@ -129,9 +131,9 @@ export function LoginForm() {
           type="submit"
           disabled={isSubmitting}
           className={cn(
-            'w-full h-11 rounded-xl font-semibold text-sm text-white mt-2',
-            'bg-brand-dark hover:bg-brand-medium',
-            'transition-colors shadow-md',
+            'w-full h-10 rounded-lg font-semibold text-xs text-white mt-1',
+            'bg-emerald-600 hover:bg-emerald-700',
+            'transition-colors shadow-sm',
             'disabled:opacity-60 disabled:cursor-not-allowed',
             'flex items-center justify-center gap-2'
           )}

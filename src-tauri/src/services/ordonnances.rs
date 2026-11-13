@@ -172,6 +172,7 @@ pub fn get_by_id(conn: &Connection, id: &str) -> Result<OrdonnancePayload, AppEr
 }
 
 /// Liste les ordonnances d'un animal spécifique.
+#[allow(dead_code)]
 pub fn list_by_animal(conn: &Connection, animal_id: &str) -> Result<Vec<OrdonnancePayload>, AppError> {
     let mut stmt = conn.prepare(
         "SELECT o.id, o.date_ordonnance, c.nom || ' ' || c.prenom, a.nom, a.espece, u.nom

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "spa_ngz",
+  "productName": "VetPharma",
   "version": "0.1.0",
-  "identifier": "com.pc.spa_ngz",
+  "identifier": "com.aspangozi.vetpharma",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,16 +13,18 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "spa_ngz",
-        "width": 800,
-        "height": 600
+        "title": "VetPharma - Aspa Ngozi",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1024,
+        "minHeight": 700
       }
     ],
     "security": {
       "csp": null,
       "assetProtocol": {
-        "enable":true,
-        "scope":["**"]
+        "enable": true,
+        "scope": ["**"]
       }
     }
   },

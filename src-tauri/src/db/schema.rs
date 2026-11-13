@@ -472,7 +472,7 @@ pub fn migrate_produits_vers_lots(conn: &Connection) -> Result<(), AppError> {
     let mut count = 0;
 
     for row in produits {
-        let (id, nom, stock, prix_achat, date_peremption) = row?;
+        let (id, _nom, stock, prix_achat, date_peremption) = row?;
         
         // Créer un lot initial avec le stock actuel
         let lot_id = format!("LOT-{}", &uuid::Uuid::new_v4().to_string()[..6].to_uppercase());

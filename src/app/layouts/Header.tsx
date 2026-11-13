@@ -2,37 +2,29 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, ChevronDown, LogOut, User, Settings } from 'lucide-react';
 import { useAuth } from '@/features/auth';
-import { RoleSwitcher } from '@/features/auth';
-import { Notification } from '@/features/notifications/types';
 import { NotificationPanel } from '@/features/notifications/components/NotificationPanel';
 
 export function Header() {
   const { user, logout } = useAuth();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   
-  // 1. État pour savoir si le menu est ouvert ou fermé
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
-  // 2. Référence vers le menu pour détecter les clics à l'extérieur
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // 3. Effet pour fermer le menu si on clique en dehors
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
       }
     }
-    // On ajoute l'écouteur d'événement
     document.addEventListener('mousedown', handleClickOutside);
-    // On le retire quand le composant est détruit (cleanup)
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
     <header className="h-12 bg-white/95 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between px-4 sticky top-0 z-10 shadow-[0_1px_2px_rgba(0,0,0,0.02)] select-none">
       
-      {/* --- RECHERCHE GLOBALE STYLE COMMAND PALETTE --- */}
+      {/* --- RECHERCHE GLOBALE --- */}
       <div className="flex items-center gap-3 w-1/2 max-w-md">
         <div className="relative w-full">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -52,13 +44,13 @@ export function Header() {
       {/* --- ACTIONS & PROFIL --- */}
       <div className="flex items-center gap-3">
         
-        {/* Statut du système (Desktop) */}
+        {/* Statut du système */}
         <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50/80 border border-emerald-200/60 text-[11px] font-medium text-emerald-800">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>Base Locale Connectée</span>
         </div>
 
-        <RoleSwitcher />
+        {/* ❌ RoleSwitcher SUPPRIMÉ */}
 
         {/* Notifications */}
         <button 
@@ -75,7 +67,6 @@ export function Header() {
         {/* --- MENU DÉROULANT DU PROFIL --- */}
         <div className="relative" ref={menuRef}>
           
-          {/* Bouton déclencheur compact */}
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-lg hover:bg-slate-100 border border-transparent hover:border-slate-200/60 transition-all focus:outline-none cursor-pointer"
@@ -94,7 +85,6 @@ export function Header() {
             <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {/* Le Menu Déroulant */}
           {isMenuOpen && (
             <div className="absolute right-0 mt-1.5 w-48 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200/80 p-1 z-50 animate-in fade-in zoom-in-95 duration-150">
               
@@ -130,7 +120,7 @@ export function Header() {
         </div>
 
       </div>
-      {/***------------------- Panneau de notifications --------- */}
+      
       <NotificationPanel isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
     </header>
   );

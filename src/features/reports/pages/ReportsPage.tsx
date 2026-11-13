@@ -1,104 +1,104 @@
-import { useState, useEffect } from "react";
-import {
-    BarChart3,
-    Download,
-    TrendingUp,
-    TrendingDown,
-    Wallet,
-    PieChart,
-    Users
+import { useState, useEffect } from 'react';
+import { 
+  BarChart3, Download, TrendingUp, TrendingDown, 
+  Wallet, PieChart, Users, Loader2 // <-- Ajout de Loader2
 } from 'lucide-react';
-
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    Legend
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
-import { reportApi } from "../api/reportApi";
-import type { ReportData } from "../types";
-import { callBackend } from "../../../shared/lib/tauri"; // ✅ IMPORT AJOUTÉ
+import { reportApi } from '../api/reportApi';
+import type { ReportData } from '../types';
+import { callBackend } from '@/shared/lib/tauri'; 
+import { toast } from 'sonner';
 import { cn } from '@/shared/lib/cn';
-import { toast } from "sonner";
 
-export function ReportPage() {
-    const [data, setData] = useState<ReportData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+export function ReportsPage() {
+  const [data, setData] = useState<ReportData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // NOUVEL ÉTAT : Pour gérer le chargement de l'export
+  const [isExporting, setIsExporting] = useState(false);
 
-    useEffect(() => {
-        reportApi.getReportData()
-            .then(res => {
-                setData(res);
-                setIsLoading(false);
-            })
-            .catch((err) => {
-                console.error("Erreur chargement rapports:", err);
-                toast.error("Erreur lors du chargement des rapports");
-                setIsLoading(false);
-            });
-    }, []);
+  useEffect(() => {
+    reportApi.getReportData().then(res => {
+      setData(res);
+      setIsLoading(false);
+    });
+  }, []);
 
-    const handleExport = async () => {
-        try {
-            const path = await callBackend<string>('export_ventes_csv');
-            console.log("✅ Export réussi :", path);
-            
-            // Toast avec titre court + description fixe
-            toast.success("Export CSV réussi", {
-                description: "Le fichier est sur votre Bureau.",
-                duration: 6000,
-            });
-        } catch (e: any) {
-            console.error("❌ Erreur export :", e);
-            const message = typeof e === 'string' ? e : e?.message || "Erreur inconnue";
-            toast.error("Erreur d'export", {
-                description: message.substring(0, 100), // limite la taille
-                duration: 6000,
-            });
-        }
-    };
-
-    if (isLoading || !data) {
-        return (
-            <div className="p-10 text-xs font-medium text-slate-400 animate-pulse">
-                Génération des rapports en cours...
-            </div>
-        );
+  // --- FONCTION D'EXPORT OPTIMISÉE ---
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const path = await callBackend<string>('export_ventes_csv');
+      console.log("✅ Export réussi :", path);
+      
+      // On utilise le nom du fichier renvoyé par Rust pour le message
+      // (ex: "C:\Users\...\Bureau\ventes_2026.csv" -> "ventes_2026.csv")
+      const fileName = path.split(/[/\\]/).pop(); 
+      
+      toast.success("Export CSV réussi", {
+          description: `Le fichier ${fileName} a été généré.`,
+          duration: 6000,
+      });
+    } catch (e: any) {
+      console.error("❌ Erreur export :", e);
+      const message = typeof e === 'string' ? e : e?.message || "Erreur inconnue";
+      toast.error("Erreur d'export", {
+          description: message.substring(0, 100),
+          duration: 6000,
+      });
+    } finally {
+      setIsExporting(false); // On arrête le loader
     }
+  };
 
-    const formatMGA = (val: number) => `${(val / 1000000).toFixed(1)}M FBU`;
+  if (isLoading || !data) {
+    return <div className="p-10 text-xs font-medium text-slate-400 animate-pulse">Génération des rapports en cours...</div>;
+  }
 
-    return (
-        <div className="space-y-4 max-w-[1600px] mx-auto pb-10">
-    
-            {/* --- EN-TÊTE --- */}
-            <div className="flex justify-between items-end">
-                <div>
-                    <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-emerald-600" /> Rapports Financiers
-                    </h1>
-                    <p className="text-[11px] text-slate-500 mt-1">
-                        Analysez la rentabilité et les performances de votre pharmacie.
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    <select className="h-9 px-3 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">
-                        <option>6 derniers mois</option>
-                        <option>Cette année</option>
-                        <option>Année précédente</option>
-                    </select>
-                    <button 
-                        onClick={handleExport}
-                        className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm cursor-pointer"
-                    >
-                        <Download className="w-4 h-4" /> Exporter CSV
-                    </button>
-                </div>
-            </div>
+  const formatMGA = (val: number) => `${(val / 1000000).toFixed(1)}M FBU`;
+
+  return (
+    <div className="space-y-4 max-w-[1600px] mx-auto pb-10">
+      
+      {/* --- EN-TÊTE --- */}
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-emerald-600" /> Rapports Financiers
+          </h1>
+          <p className="text-[11px] text-slate-500 mt-1">
+            Analysez la rentabilité et les performances de votre pharmacie.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <select className="h-9 px-3 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">
+            <option>6 derniers mois</option>
+            <option>Cette année</option>
+            <option>Année précédente</option>
+          </select>
+
+          {/* BOUTON D'EXPORT MIS À JOUR */}
+          <button 
+            onClick={handleExport}
+            disabled={isExporting}
+            className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> 
+                Exportation...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" /> 
+                Exporter CSV
+              </>
+            )}
+          </button>
+        </div>
+      </div>
 
             {/* --- CARTES KPI --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">

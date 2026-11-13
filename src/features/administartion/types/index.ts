@@ -7,9 +7,19 @@ export interface User {
   email: string;
   role: UserRole;
   isActive: boolean;
-  dateCreation: string;
+  createdAt?: string;
 }
 
+
+export interface UserFormData {
+  nom: string;
+  email: string;
+  role: UserRole;
+  isActive: boolean;
+  password: string;
+}
+
+// ... autres types existants (AuditLog, etc.)
 export interface AuditLog {
   id: string;
   date: string;
@@ -18,12 +28,3 @@ export interface AuditLog {
   details: string;
 }
 
-export interface User{
-  id:string;
-  nom:string;
-  emaail:string;
-  role:UserRole;
-  isActive: boolean;
-  password?:string;
-
-}
