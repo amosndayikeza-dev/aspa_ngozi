@@ -65,7 +65,7 @@ export function FournisseurListPage() {
         toast.success("Nouveau fournisseur ajouté");
       }
       setIsModalOpen(false);
-      fetchFournisseurs(); // Rafraîchit la liste
+      fetchFournisseurs();
     } catch (error) {
       toast.error("Une erreur est survenue");
     }
@@ -79,7 +79,7 @@ export function FournisseurListPage() {
       await achatApi.deleteFournisseur(fournisseurToDelete.id);
       toast.success("Fournisseur supprimé");
       setIsDeleteModalOpen(false);
-      fetchFournisseurs(); // Rafraîchit la liste
+      fetchFournisseurs();
     } catch (error) {
       toast.error("Erreur lors de la suppression");
     } finally {
@@ -96,7 +96,7 @@ export function FournisseurListPage() {
       header: 'Fournisseur',
       render: (f) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500">
+          <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 shrink-0">
             <Truck className="w-4 h-4" />
           </div>
           <span className="text-xs font-bold text-slate-900">{f.nom}</span>
@@ -107,8 +107,12 @@ export function FournisseurListPage() {
       header: 'Contact',
       render: (f) => (
         <div className="flex flex-col gap-1">
-          <span className="text-[11px] text-slate-600 flex items-center gap-1.5"><Phone className="w-3 h-3 text-slate-400" /> {f.telephone}</span>
-          <span className="text-[11px] text-slate-600 flex items-center gap-1.5"><Mail className="w-3 h-3 text-slate-400" /> {f.email}</span>
+          <span className="text-[11px] font-medium text-slate-600 flex items-center gap-1.5">
+            <Phone className="w-3 h-3 text-slate-400" /> {f.telephone}
+          </span>
+          <span className="text-[11px] text-slate-500 flex items-center gap-1.5">
+            <Mail className="w-3 h-3 text-slate-400" /> {f.email}
+          </span>
         </div>
       )
     },
@@ -117,10 +121,18 @@ export function FournisseurListPage() {
       className: 'text-right',
       render: (f) => (
         <div className="flex items-center justify-end gap-1">
-          <button onClick={(e) => handleOpenEdit(f, e)} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Modifier">
+          <button 
+            onClick={(e) => handleOpenEdit(f, e)} 
+            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" 
+            title="Modifier"
+          >
             <Edit className="w-4 h-4" />
           </button>
-          <button onClick={(e) => handleOpenDelete(f, e)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Supprimer">
+          <button 
+            onClick={(e) => handleOpenDelete(f, e)} 
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" 
+            title="Supprimer"
+          >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -142,44 +154,51 @@ export function FournisseurListPage() {
             Gérez vos partenaires et passez de nouvelles commandes.
           </p>
         </div>
+        
         <div className="flex items-center gap-2">
+          {/* Bouton secondaire (bordure) */}
           <button 
             onClick={() => navigate('/stock/achats/nouveau')}
-            className="h-9 px-3 bg-white border border-slate-200 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm"
+            className="h-9 px-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-600 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
           >
-            Nouvelle Commande <ArrowRight className="w-4 h-4" />
+            Nouvelle Commande 
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
           
-          <button onClick={handleOpenCreate} className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm">
+          {/* Bouton primaire (plein) */}
+          <button 
+            onClick={handleOpenCreate} 
+            className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm"
+          >
             <Plus className="w-4 h-4" />
             Nouveau Fournisseur
           </button>
         </div>
       </div>
 
-      {/* BARRE DE RECHERCHE */}
-      <div className="flex items-center gap-4 bg-white p-2 rounded-xl border border-slate-200/90 ">
-        <div className="relative flex-1 max-w-md">
+      {/* BARRE DE RECHERCHE (Style compact) */}
+      <div className="bg-white p-2 rounded-xl border border-slate-200/90 shadow-sm">
+        <div className="relative max-w-md">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Rechercher un fournisseur..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-8 pl-8 pr-3 rounded-lg bg-slate-50 border border-slate-200/80 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/60 transition-all"
+            className="w-full h-8 pl-8 pr-3 rounded-lg bg-slate-50 border border-slate-200/80 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/60 transition-all"
           />
         </div>
       </div>
 
-      {/* TABLEAU */}
+      {/* TABLEAU (Attention : 'columns' en minuscule) */}
       <DataTable 
         data={filteredFournisseurs}
-        Columns={columns}
+        Columns={columns} 
         isLoading={isLoading}
         keyExtractor={(f) => f.id}
       />
 
-      {/* MODALES (Regroupées à la fin) */}
+      {/* MODALES */}
       
       {/* 1. Formulaire d'ajout/édition */}
       <Modal

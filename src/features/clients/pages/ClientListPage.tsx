@@ -1,5 +1,9 @@
+// src/features/clients/pages/ClientListPage.tsx
 import { useState, useEffect } from 'react';
-import { Plus, Search, Eye, Phone, Mail, PawPrint, Edit, Trash2, Wallet } from 'lucide-react';
+import { 
+  Plus, Search, Eye, Phone, Mail, PawPrint, Edit, Trash2, Wallet,
+  ChevronLeft, ChevronRight // <-- Ajout des icônes de pagination
+} from 'lucide-react';
 import { clientApi } from '../api/clientApi';
 import type { Client } from '../types';
 import { DataTable, type Column } from '@/shared/ui/DataTable';
@@ -7,33 +11,46 @@ import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/shared/ui/Modal';
 import { ClientForm } from '../components/ClientForm';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
+import { ResultDialog } from '@/shared/ui/ResultDialog';
 import { toast } from 'sonner';
 import { detteApi } from '@/features/dettes/api/detteApi';
+import { cn } from '@/shared/lib/cn';
+
+const ITEMS_PER_PAGE = 10; // Nombre de clients par page
 
 export function ClientListPage() {
     const [clients, setClients] = useState<Client[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
-    
+
+    // --- ÉTATS POUR LA PAGINATION ---
+    const [currentPage, setCurrentPage] = useState(1);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // ✅ Map des dettes par client : { 'C-01': 2500, 'C-02': 0, ... }
+    // Map des dettes par client
     const [dettesMap, setDettesMap] = useState<Record<string, number>>({});
-    
-    // ✅ Fonction de chargement des clients + dettes
+
+    // Popup résultat CRUD
+    const [resultDialog, setResultDialog] = useState<{
+        open: boolean;
+        variant: 'success' | 'error';
+        title: string;
+        description?: string;
+    }>({ open: false, variant: 'success', title: '' });
+
+    // Chargement des clients + dettes
     const loadData = async () => {
         setIsLoading(true);
         try {
-            // 1. Charger les clients
             const clientsData = await clientApi.getClients();
             setClients(clientsData);
 
-            // 2. Charger les dettes en parallèle pour chaque client
             const dettesEntries = await Promise.all(
                 clientsData.map(async (c) => {
                     try {
@@ -44,8 +61,7 @@ export function ClientListPage() {
                     }
                 })
             );
-            
-            // On ne garde que les clients qui doivent quelque chose
+
             setDettesMap(
                 Object.fromEntries(dettesEntries.filter(([_, du]) => du > 0))
             );
@@ -61,27 +77,34 @@ export function ClientListPage() {
         loadData();
     }, []);
 
-    // Ouvre la modale en mode création
+    // Réinitialiser la page quand on tape dans la recherche
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
     const handleOpenCreateModal = () => {
         setSelectedClient(null);
         setIsModalOpen(true);
     };
 
-    // Ouvre la modale en mode édition
     const handleOpenEditModal = (client: Client, e: React.MouseEvent) => {
         e.stopPropagation();
         setSelectedClient(client);
         setIsModalOpen(true);
     };
 
-    // Ouvre la modale de suppression
     const handleOpenDelete = (client: Client, e: React.MouseEvent) => {
         e.stopPropagation();
         setClientToDelete(client);
         setIsDeleteModalOpen(true);
     };
-    
-    // ✅ Suppression réelle (appel au backend)
+
+    const extractErrorMessage = (e: any, fallback: string): string => {
+        if (typeof e === 'string') return e;
+        if (e?.message) return e.message;
+        return fallback;
+    };
+
     const handleConfirmDelete = async () => {
         if (!clientToDelete) return;
         setIsDeleting(true);
@@ -90,40 +113,80 @@ export function ClientListPage() {
             setClients((prev) => prev.filter((c) => c.id !== clientToDelete.id));
             toast.success("Client supprimé avec succès");
             setIsDeleteModalOpen(false);
+
+            setResultDialog({
+                open: true,
+                variant: 'success',
+                title: 'Client supprimé',
+                description: `Le dossier de "${clientToDelete.nom} ${clientToDelete.prenom}" a été supprimé.`,
+            });
         } catch (error: any) {
-            toast.error(error.message || "Erreur lors de la suppression");
+            const message = extractErrorMessage(error, "Erreur lors de la suppression");
+            toast.error(message);
+
+            setResultDialog({
+                open: true,
+                variant: 'error',
+                title: 'Suppression impossible',
+                description: message,
+            });
         } finally {
             setIsDeleting(false);
             setClientToDelete(null);
         }
     };
 
-    // ✅ Création / Modification réelle
     const handleSubmit = async (data: any) => {
         try {
             if (selectedClient) {
                 const updated = await clientApi.updateClient(selectedClient.id, data);
                 setClients(clients.map(c => c.id === selectedClient.id ? { ...c, ...updated } : c));
                 toast.success("Client mis à jour avec succès");
+
+                setResultDialog({
+                    open: true,
+                    variant: 'success',
+                    title: 'Client modifié',
+                    description: `Les informations de "${data.nom} ${data.prenom}" ont été mises à jour.`,
+                });
             } else {
                 const newClient = await clientApi.createClient(data);
                 setClients([newClient, ...clients]);
                 toast.success("Client ajouté avec succès");
+
+                setResultDialog({
+                    open: true,
+                    variant: 'success',
+                    title: 'Client créé',
+                    description: `"${data.nom} ${data.prenom}" a été ajouté à votre fichier client.`,
+                });
             }
             setIsModalOpen(false);
-            // ✅ On recharge les dettes (au cas où)
             loadData();
         } catch (error: any) {
-            toast.error(error.message || "Erreur lors de l'enregistrement");
+            const message = extractErrorMessage(error, "Erreur lors de l'enregistrement");
+            toast.error(message);
+
+            setResultDialog({
+                open: true,
+                variant: 'error',
+                title: 'Enregistrement impossible',
+                description: message,
+            });
         }
     };
 
-    const filteredClients = clients.filter((client) => 
+    const filteredClients = clients.filter((client) =>
         `${client.nom} ${client.prenom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.telephone.includes(searchTerm)
     );
 
-    // Définition des colonnes du tableau
+    // --- LOGIQUE DE PAGINATION ---
+    const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+    const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+    const currentClients = filteredClients.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredClients.length / ITEMS_PER_PAGE);
+
     const columns: Column<Client>[] = [
         {
             header: 'Client',
@@ -168,7 +231,6 @@ export function ClientListPage() {
                 </div>
             )
         },
-        // ✅ NOUVELLE COLONNE DETTE
         {
             header: 'Dette',
             render: (client) => {
@@ -253,13 +315,70 @@ export function ClientListPage() {
                 </div>
             </div>
 
-            <DataTable 
-                data={filteredClients}
+            {/* TABLEAU (avec currentClients et 'columns' minuscule) */}
+            <DataTable
+                data={currentClients}
                 Columns={columns}
                 isLoading={isLoading}
                 keyExtractor={(client) => client.id}
             />
 
+            {/* --- PAGINATION --- */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200/90 rounded-xl shadow-sm">
+                    <p className="text-[11px] text-slate-500">
+                        Affichage de <span className="font-bold text-slate-800">{indexOfFirstItem + 1}</span> à{' '}
+                        <span className="font-bold text-slate-800">{Math.min(indexOfLastItem, filteredClients.length)}</span> sur{' '}
+                        <span className="font-bold text-slate-800">{filteredClients.length}</span> clients
+                    </p>
+
+                    <div className="flex items-center gap-1">
+                        {/* Précédent */}
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                            className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+
+                        {/* Pages */}
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                            // Logique pour n'afficher que 5 boutons max
+                            if (totalPages > 5 && Math.abs(page - currentPage) > 1 && page !== 1 && page !== totalPages) {
+                                if (page === 2 || page === totalPages - 1) return <span key={page} className="px-1 text-slate-400 text-[11px]">...</span>;
+                                return null;
+                            }
+
+                            return (
+                                <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={cn(
+                                        "min-w-[26px] h-7 px-1.5 rounded-md text-[11px] font-bold transition-colors",
+                                        currentPage === page
+                                            ? "bg-emerald-600 text-white shadow-sm"
+                                            : "text-slate-600 hover:bg-slate-100"
+                                    )}
+                                >
+                                    {page}
+                                </button>
+                            );
+                        })}
+
+                        {/* Suivant */}
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                            className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* MODALES */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -267,13 +386,13 @@ export function ClientListPage() {
                 description="Saisissez les informations du propriétaire. Les animaux pourront être ajoutés après."
                 maxWidth="lg"
             >
-                <ClientForm 
+                <ClientForm
                     initialData={selectedClient || undefined }
                     onSubmit={handleSubmit}
                     onCancel={() => setIsModalOpen(false)}
                 />
             </Modal>
-            
+
             <ConfirmDialog
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
@@ -281,6 +400,14 @@ export function ClientListPage() {
                 title="Supprimer ce client ?"
                 description={`Êtes-vous sûr de vouloir supprimer ${clientToDelete?.nom} ${clientToDelete?.prenom} ? Tous ses animaux et son historique seront définitivement perdus.`}
                 isLoading={isDeleting}
+            />
+
+            <ResultDialog
+                isOpen={resultDialog.open}
+                onClose={() => setResultDialog({ ...resultDialog, open: false })}
+                variant={resultDialog.variant}
+                title={resultDialog.title}
+                description={resultDialog.description}
             />
 
         </div>

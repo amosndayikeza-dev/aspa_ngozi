@@ -3,9 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Plus, Minus, Truck, CheckCircle2, ShoppingBag, Building2, Receipt, ArrowRight, Pill } from 'lucide-react';
 import { medicamentApi } from '../api/medicamentApi';
 import { achatApi } from '../api/achatApi';
-import type { Medicament, LigneAchat, Fournisseur } from '../types';
+import type { Medicament, Fournisseur } from '../types';  
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/cn';
+
+// ✅ Type local — évite de modifier ../types (qui n'exporte pas LigneAchat)
+interface LigneAchat {
+  medicamentId: string;
+  nomMedicament: string;
+  numeroLot: string;
+  quantite: number;
+  prixAchatUnitaire: number;
+  datePeremption: string;
+}
 
 export function NouvelAchatPage() {
   const navigate = useNavigate();
@@ -24,32 +34,27 @@ export function NouvelAchatPage() {
     });
   }, []);
 
-  // Ajouter un produit au panier
   const handleAddMedicament = (med: Medicament) => {
     setLignes(prev => {
       const existing = prev.find(l => l.medicamentId === med.id);
       if (existing) {
         return prev.map(l => l.medicamentId === med.id ? { ...l, quantite: l.quantite + 1 } : l);
       }
-      
-      // Date par défaut : aujourd'hui + 1 an
       const dateDefaut = new Date();
       dateDefaut.setFullYear(dateDefaut.getFullYear() + 1);
-      
-      return [...prev, { 
-        medicamentId: med.id, 
-        nomMedicament: med.nom, 
+      return [...prev, {
+        medicamentId: med.id,
+        nomMedicament: med.nom,
         numeroLot: `LOT-${Date.now().toString().slice(-6)}`,
-        quantite: 1, 
+        quantite: 1,
         prixAchatUnitaire: med.prixAchat,
         datePeremption: dateDefaut.toISOString().split('T')[0],
       }];
     });
   };
-  
-  // Mettre à jour un champ de la ligne
+
   const handleUpdateLigne = (id: string, field: 'numeroLot' | 'datePeremption' | 'prixAchatUnitaire', value: any) => {
-    setLignes(prev => prev.map(l => 
+    setLignes(prev => prev.map(l =>
       l.medicamentId === id ? { ...l, [field]: value } : l
     ));
   };
@@ -69,14 +74,12 @@ export function NouvelAchatPage() {
   const totalCommande = lignes.reduce((acc, l) => acc + (l.prixAchatUnitaire * l.quantite), 0);
   const selectedFournisseurData = fournisseurs.find(f => f.id === selectedFournisseur);
 
-  // ✅ Soumission corrigée
   const handleSubmit = async () => {
     if (!selectedFournisseur || lignes.length === 0) {
       toast.error("Veuillez sélectionner un fournisseur et au moins un produit.");
       return;
     }
 
-    // Validation : chaque ligne doit avoir un n° de lot et une date de péremption
     for (const ligne of lignes) {
       if (!ligne.numeroLot || ligne.numeroLot.trim() === '') {
         toast.error(`Le numéro de lot manque pour "${ligne.nomMedicament}".`);
@@ -90,7 +93,6 @@ export function NouvelAchatPage() {
 
     setIsSubmitting(true);
     try {
-      // ✅ Envoi au format attendu par Rust (produitId, numeroLot, quantite, prixUnitaire, datePeremption)
       await achatApi.createAchat({
         fournisseurId: selectedFournisseur,
         lignes: lignes.map(l => ({
@@ -114,16 +116,16 @@ export function NouvelAchatPage() {
 
   return (
     <div className="h-[calc(100vh-5.5rem)] max-w-[1600px] mx-auto flex flex-col gap-4">
-      
+
       {/* --- 1. EN-TÊTE --- */}
       <div className="flex flex-col gap-3">
-        <button 
-          onClick={() => navigate('/stock')} 
+        <button
+          onClick={() => navigate('/stock')}
           className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-md transition-colors w-fit"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Retour au stock
         </button>
-        
+
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -134,7 +136,7 @@ export function NouvelAchatPage() {
               Chaque ligne crée un lot avec sa propre date de péremption.
             </p>
           </div>
-          
+
           <div className="flex items-center gap-2 text-[10px] font-medium">
             <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -147,27 +149,30 @@ export function NouvelAchatPage() {
       </div>
 
       {/* --- 2. LAYOUT PRINCIPAL --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-hidden">
+      {/* ✅ min-h-0 : indispensable pour que overflow fonctionne dans un flex parent */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-hidden min-h-0">
 
         {/* === COLONNE GAUCHE (Catalogue) === */}
-        <div className="lg:col-span-7 flex flex-col gap-4 overflow-hidden">
-          
-          {/* Carte Fournisseur */}
-          <div className="bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-3">
+        <div className="lg:col-span-7 flex flex-col gap-4 overflow-hidden min-h-0">
+
+          {/* Carte Fournisseur — scroll HORIZONTAL */}
+          <div className="bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-3 shrink-0">
             <div className="flex items-center gap-2 mb-2.5">
               <Building2 className="w-3.5 h-3.5 text-slate-500" />
               <h2 className="text-xs font-bold text-slate-900">Fournisseur</h2>
+              <span className="text-[9px] text-slate-400 ml-auto">↔ défiler</span>
             </div>
-            
-            <div className="flex flex-nowrap gap-2 overflow-x-auto pb-2 no-scrollbar">
+
+            {/* ✅ no-scrollbar retiré → la scrollbar horizontale apparaît */}
+            <div className="flex flex-nowrap gap-2 overflow-x-auto pb-2">
               {fournisseurs.map(f => (
                 <button
                   key={f.id}
                   onClick={() => setSelectedFournisseur(f.id)}
                   className={cn(
                     "flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all shrink-0 min-w-[160px]",
-                    selectedFournisseur === f.id 
-                      ? "bg-emerald-50 border-emerald-500 shadow-sm ring-1 ring-emerald-500/20" 
+                    selectedFournisseur === f.id
+                      ? "bg-emerald-50 border-emerald-500 shadow-sm ring-1 ring-emerald-500/20"
                       : "bg-white border-slate-200 hover:border-emerald-300 hover:bg-slate-50"
                   )}
                 >
@@ -188,9 +193,10 @@ export function NouvelAchatPage() {
             </div>
           </div>
 
-          {/* Catalogue des produits */}
-          <div className="bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col flex-1 overflow-hidden">
-            <div className="p-3 border-b border-slate-100">
+          {/* Catalogue des produits — scroll VERTICAL */}
+          {/* ✅ min-h-0 ajouté sur le flex container pour autoriser le scroll interne */}
+          <div className="bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col flex-1 overflow-hidden min-h-0">
+            <div className="p-3 border-b border-slate-100 shrink-0">
               <div className="relative">
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
@@ -203,46 +209,48 @@ export function NouvelAchatPage() {
               </div>
             </div>
 
-            {/* Grille produits */}
-            <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-3 gap-2">
-              {filteredMeds.map(med => (
-                <button
-                  key={med.id}
-                  onClick={() => handleAddMedicament(med)}
-                  className="p-3 bg-white border border-slate-200/80 rounded-xl hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-100 transition-all text-left flex flex-col gap-1.5 group relative overflow-hidden"
-                >
-                  <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  
-                  <div className="flex items-center gap-2 mb-1 pr-3">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-                      {med.imageUrl ? (
-                        <img src={med.imageUrl} alt={med.nom} className="w-full h-full object-cover" />
-                      ) : (
-                        <Pill className="w-4 h-4 text-slate-300" />
-                      )}
-                    </div>
-                    <span className="text-xs font-semibold text-slate-900 line-clamp-1 group-hover:text-emerald-700 transition-colors">
-                      {med.nom}
-                    </span>
-                  </div>
+            {/* ✅ min-h-0 + overflow-y-auto = scroll vertical fiable */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {filteredMeds.map(med => (
+                  <button
+                    key={med.id}
+                    onClick={() => handleAddMedicament(med)}
+                    className="p-3 bg-white border border-slate-200/80 rounded-xl hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-100 transition-all text-left flex flex-col gap-1.5 group relative overflow-hidden"
+                  >
+                    <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400" />
 
-                  <span className="text-[10px] text-slate-400 font-mono">Achat: {med.prixAchat.toLocaleString('fr-FR')} FBU</span>
-                  
-                  <div className="mt-auto pt-1 border-t border-slate-100 flex justify-between items-center w-full">
-                    <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Ajouter</span>
-                    <div className="p-1 bg-slate-50 group-hover:bg-emerald-600 group-hover:text-white rounded-md transition-colors text-slate-500">
-                      <Plus className="w-3 h-3" />
+                    <div className="flex items-center gap-2 mb-1 pr-3">
+                      <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                        {med.imageUrl ? (
+                          <img src={med.imageUrl} alt={med.nom} className="w-full h-full object-cover" />
+                        ) : (
+                          <Pill className="w-4 h-4 text-slate-300" />
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold text-slate-900 line-clamp-1 group-hover:text-emerald-700 transition-colors">
+                        {med.nom}
+                      </span>
                     </div>
-                  </div>
-                </button>
-              ))}
+
+                    <span className="text-[10px] text-slate-400 font-mono">Achat: {med.prixAchat.toLocaleString('fr-FR')} FBU</span>
+
+                    <div className="mt-auto pt-1 border-t border-slate-100 flex justify-between items-center w-full">
+                      <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Ajouter</span>
+                      <div className="p-1 bg-slate-50 group-hover:bg-emerald-600 group-hover:text-white rounded-md transition-colors text-slate-500">
+                        <Plus className="w-3 h-3" />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
         {/* === COLONNE DROITE (Bon de commande) === */}
-        <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col overflow-hidden">
-          <div className="p-3 border-b border-slate-100 bg-slate-50/50">
+        <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col overflow-hidden min-h-0">
+          <div className="p-3 border-b border-slate-100 bg-slate-50/50 shrink-0">
             <div className="flex items-center gap-2 mb-1">
               <Receipt className="w-4 h-4 text-slate-600" />
               <h2 className="text-xs font-bold text-slate-900">Bon de commande</h2>
@@ -252,8 +260,8 @@ export function NouvelAchatPage() {
             </p>
           </div>
 
-          {/* ✅ Lignes avec champs lot */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50/30">
+          {/* ✅ min-h-0 sur la zone scrollable des lignes */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2 bg-slate-50/30">
             {lignes.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60 py-10">
                 <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
@@ -264,22 +272,20 @@ export function NouvelAchatPage() {
               </div>
             ) : (
               lignes.map(l => (
-                <div 
-                  key={l.medicamentId} 
+                <div
+                  key={l.medicamentId}
                   className="p-2.5 bg-white rounded-lg border border-slate-200/60 shadow-sm space-y-2"
                 >
-                  {/* Ligne 1 : Nom + Retirer */}
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold text-slate-900 truncate">{l.nomMedicament}</p>
-                    <button 
-                      onClick={() => handleRemove(l.medicamentId)} 
+                    <button
+                      onClick={() => handleRemove(l.medicamentId)}
                       className="text-[10px] font-medium text-rose-400 hover:text-rose-600 transition-colors shrink-0 ml-2"
                     >
                       Retirer
                     </button>
                   </div>
 
-                  {/* Ligne 2 : N° lot + Date péremption */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-0.5">
                       <label className="text-[9px] font-bold text-slate-500 uppercase">N° de lot</label>
@@ -302,7 +308,6 @@ export function NouvelAchatPage() {
                     </div>
                   </div>
 
-                  {/* Ligne 3 : Prix + Qté + Sous-total */}
                   <div className="grid grid-cols-3 gap-2 items-end">
                     <div className="space-y-0.5">
                       <label className="text-[9px] font-bold text-slate-500 uppercase">Prix achat</label>
@@ -337,7 +342,7 @@ export function NouvelAchatPage() {
             )}
           </div>
 
-          <div className="p-3 border-t border-slate-100 bg-white">
+          <div className="p-3 border-t border-slate-100 bg-white shrink-0">
             <div className="border-t border-dashed border-slate-200 my-2" />
             <div className="flex justify-between items-center mb-3">
               <span className="text-[11px] font-medium text-slate-500">Total Commande</span>
@@ -351,15 +356,15 @@ export function NouvelAchatPage() {
               disabled={isSubmitting || lignes.length === 0}
               className={cn(
                 "w-full h-10 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm",
-                lignes.length === 0 
-                  ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+                lignes.length === 0
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                   : "bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-md hover:shadow-emerald-200"
               )}
             >
               <CheckCircle2 className="w-4 h-4" />
               {isSubmitting ? 'Enregistrement...' : 'Valider la commande'}
             </button>
-            
+
             <p className="text-center text-[9px] text-slate-400 mt-2">
               En validant, un lot sera créé pour chaque produit.
             </p>

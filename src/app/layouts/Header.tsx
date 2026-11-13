@@ -93,7 +93,7 @@ export function Header() {
                 <p className="text-[10px] text-slate-500">{user?.role}</p>
               </div>
 
-              <button className="w-full text-left px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2.5 transition-colors cursor-pointer">
+              {/**<button className="w-full text-left px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2.5 transition-colors cursor-pointer">
                 <User className="w-3.5 h-3.5 text-slate-400" />
                 <span>Mon profil</span>
               </button>
@@ -101,7 +101,7 @@ export function Header() {
               <button className="w-full text-left px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2.5 transition-colors cursor-pointer">
                 <Settings className="w-3.5 h-3.5 text-slate-400" />
                 <span>Paramètres</span>
-              </button>
+              </button>*/}
 
               <div className="h-px bg-slate-100 my-1"></div>
 

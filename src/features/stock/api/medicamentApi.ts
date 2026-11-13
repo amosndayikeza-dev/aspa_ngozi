@@ -2,27 +2,53 @@ import { callBackend } from '../../../shared/lib/tauri';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import type { Medicament } from "../types";
 
-const mapProduitToMedicament = (p: any): Medicament => ({
-    id: p.id,
-    nom: p.nom,
-    dci: p.dci || '',
-    forme: p.forme || '',
-    prixAchat: p.prixAchat,
-    prixVente: p.prixVente,
-    seuilAlerte: p.seuilAlerte,
-    categorie: p.categorie || 'Autre',
-    imageUrl: p.imagePath ? convertFileSrc(p.imagePath) : 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=200&q=80',
-    // ✅ On utilise les VRAIS lots renvoyés par Rust
-    lots: (p.lots || []).map((l: any) => ({
+/**
+ * Transforme un produit Rust → Medicament front.
+ *
+ * ⚠️ CORRECTIF CRITIQUE :
+ * Avant, ce mapper oubliait `stock`, `stockValide` et `stockPerime`.
+ * Résultat : le POS voyait `med.stock === undefined` et bloquait TOUTES les ventes.
+ */
+const mapProduitToMedicament = (p: any): Medicament => {
+    const lots = (p.lots || []).map((l: any) => ({
         id: l.id,
         numeroLot: l.numeroLot,
         quantite: l.quantite,
         datePeremption: l.datePeremption,
-    })),
-});
+    }));
 
-// L'extractStockData n'est plus utilisé (plus besoin de calculer)
-// Les achats créeront les lots directement
+    const today = new Date().toISOString().split('T')[0];
+
+    const stockValide = lots
+        .filter((l: any) => l.datePeremption >= today)
+        .reduce((s: number, l: any) => s + l.quantite, 0);
+
+    const stockPerime = lots
+        .filter((l: any) => l.datePeremption < today)
+        .reduce((s: number, l: any) => s + l.quantite, 0);
+
+    const stockTotal = typeof p.stock === 'number'
+        ? p.stock
+        : (stockValide + stockPerime);
+
+    return {
+        id: p.id,
+        nom: p.nom,
+        dci: p.dci || '',
+        forme: p.forme || '',
+        prixAchat: p.prixAchat,
+        prixVente: p.prixVente,
+        seuilAlerte: p.seuilAlerte,
+        categorie: p.categorie || 'Autre',
+        imageUrl: p.imagePath
+            ? convertFileSrc(p.imagePath)
+            : 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=200&q=80',
+        lots,
+        stock: stockTotal,
+        stockValide,
+        stockPerime,
+    };
+};
 
 export const medicamentApi = {
     getMedicaments: async (): Promise<Medicament[]> => {
@@ -31,7 +57,6 @@ export const medicamentApi = {
     },
 
     createMedicament: async (data: any, imagePath?: string | null): Promise<Medicament> => {
-        // Le stock initial sera 0 (les lots seront créés via les achats)
         const rustPayload = {
             nom: data.nom,
             dci: data.dci || null,
@@ -39,7 +64,7 @@ export const medicamentApi = {
             categorie: data.categorie || null,
             prixAchat: data.prixAchat,
             prixVente: data.prixVente,
-            stock: 0,  // 👈 forcé à 0 à la création
+            stock: 0,
             seuilAlerte: data.seuilAlerte,
             datePeremption: null,
             imagePath: imagePath || null
@@ -50,7 +75,6 @@ export const medicamentApi = {
     },
 
     updateMedicament: async (id: string, data: any, imagePath?: string | null): Promise<Medicament> => {
-        // On ne touche pas au stock ici (il est géré par les lots)
         const rustPayload = {
             nom: data.nom,
             dci: data.dci || null,
@@ -58,7 +82,7 @@ export const medicamentApi = {
             categorie: data.categorie || null,
             prixAchat: data.prixAchat,
             prixVente: data.prixVente,
-            stock: 0, // 👈 ignoré côté Rust (calculé depuis les lots)
+            stock: 0,
             seuilAlerte: data.seuilAlerte,
             datePeremption: null,
             imagePath: imagePath || data.imageUrl || null
@@ -75,8 +99,7 @@ export const medicamentApi = {
     getLotsByProduit: async (produitId: string): Promise<any[]> => {
         return callBackend<any[]>('list_lots_by_produit', { produitId });
     },
-    
-    // ✅ NOUVELLES MÉTHODES : gestion des lots
+
     createLot: async (data: any): Promise<any> => {
         return callBackend<any>('create_lot', { data });
     },

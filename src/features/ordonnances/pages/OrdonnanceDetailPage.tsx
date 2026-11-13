@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, FileText, Stethoscope, User, PawPrint, Calendar } from 'lucide-react';
 import { ordonnanceApi } from '../api/ordonnanceApi';
+import { useParametres } from '@/features/settings/hooks/useParametres';
 import { toast } from 'sonner';
 
 export function OrdonnanceDetailPage() {
@@ -9,6 +10,9 @@ export function OrdonnanceDetailPage() {
   const navigate = useNavigate();
   const [ordonnance, setOrdonnance] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // ✅ Charger les paramètres de la pharmacie
+  const { parametres } = useParametres();
 
   useEffect(() => {
     if (!id) return;
@@ -47,17 +51,34 @@ export function OrdonnanceDetailPage() {
         {/* En-tête du document */}
         <div className="flex justify-between items-start border-b border-slate-200 pb-6 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-center">
-              <FileText className="w-6 h-6 text-emerald-600" />
-            </div>
+            {parametres?.logoUrl ? (
+              <img 
+                src={parametres.logoUrl} 
+                alt="Logo" 
+                className="w-12 h-12 object-contain rounded-xl border border-emerald-100 bg-white p-1" 
+              />
+            ) : (
+              <div className="w-12 h-12 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-center">
+                <FileText className="w-6 h-6 text-emerald-600" />
+              </div>
+            )}
             <div>
               <h1 className="text-xl font-bold text-slate-900">Ordonnance Vétérinaire</h1>
               <p className="text-[11px] text-slate-500 font-mono mt-0.5">N° {ordonnance.id}</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs font-bold text-slate-900">Pharmacie Vétérinaire Aspa Ngozi</p>
-            <p className="text-[11px] text-slate-500">Ngozi, Burundi</p>
+            <p className="text-xs font-bold text-slate-900">
+              {parametres?.nom || 'NOM DE LA PHARMACIE'}
+            </p>
+            <p className="text-[11px] text-slate-500">
+              {parametres?.adresse || ''}
+            </p>
+            {parametres?.telephone && (
+              <p className="text-[11px] text-slate-500">
+                Tél: {parametres.telephone}
+              </p>
+            )}
             <p className="text-[11px] text-slate-500 flex items-center justify-end gap-1 mt-1">
               <Calendar className="w-3 h-3" />
               {new Date(ordonnance.date).toLocaleDateString('fr-FR')}

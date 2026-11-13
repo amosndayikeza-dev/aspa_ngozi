@@ -1,62 +1,78 @@
-/**
- *  les caretegoris des medicaments
- */
 
-export type CategorieMedicament = 'Antibiotique'| 'Antiparasitaire' | 'Vaccin' | 'Veterinaire' | 'Aliment' | 'Autre';
-
-/** les formes galeniques */
-export type FormeMedicament = 'Comprime' | 'Sirop' | 'Injection' | 'Pommade' | 'Poudre' | 'Autre';
-
-/**
- * represente un lot specifique d'un medicament
- * permet de gerer la peremption (FEFO : fIRST expired, First out)
- */
-
-export interface Lot{
-    id: string;
-    numeroLot:string;
-    quantite: number;
-    datePeremption: string; 
-    joursRestants?: number;   
-    statut?: string;  
+// ---------- LOTS ----------
+export interface Lot {
+  id: string;
+  numeroLot: string;
+  quantite: number;
+  datePeremption: string; 
+  joursRestants?: number;
 }
 
-/**
- * Represente un medicament dans le catalogue
- */
-
+// ---------- MÉDICAMENTS ----------
 export interface Medicament {
-    id: string;
-    nom: string;
-    dci: string 
-    categorie: CategorieMedicament;
-    forme: FormeMedicament;
-    prixAchat: number;
-    prixVente: number;
-    seuilAlerte: number;
-    lots: Lot[];
-    imageUrl?: string;
-    stock?: number;           // Stock total (tous lots)
-    stockValide?: number;     // Stock vendable (hors périmés)
-    stockPerime?: number;     // Stock à jeter
-    datePeremption?: string;
-  
+  id: string;
+  nom: string;
+  dci: string;
+  forme: string;
+  categorie: string;
+  prixAchat: number;
+  prixVente: number;
+  seuilAlerte: number;
+  imageUrl?: string | null;
+  datePeremption?: string | null;
+  // Stock — remplis par medicamentApi.mapProduitToMedicament
+  stock: number;
+  stockValide: number;
+  stockPerime: number;
+  lots: Lot[];
 }
 
-/** Représente un fournisseur */
+export interface MedicamentFormData {
+  nom: string;
+  dci?: string;
+  forme?: string;
+  categorie?: string;
+  prixAchat: number;
+  prixVente: number;
+  seuilAlerte: number;
+}
+
+// ---------- FOURNISSEURS ----------
 export interface Fournisseur {
   id: string;
   nom: string;
   telephone: string;
   email: string;
+  contact?: string | null;     // présent dans le schéma, optionnel côté UI
+  createdAt?: string;
 }
 
-/** Une ligne de commande chez un fournisseur */
-export interface LigneAchat {
-  medicamentId: string;
-  nomMedicament: string;
-  numeroLot: string;
+// ---------- ACHATS ----------
+
+export interface AchatLigne {
+  id?: string;
+  produitId: string;
+  produitNom?: string;        
+  lotId?: string | null;
+  numeroLot?: string | null;
   quantite: number;
-  prixAchatUnitaire: number;
-  datePeremption: string;
+  prixUnitaire: number;
+  sousTotal?: number;
+}
+
+export interface Achat {
+  id: string;
+  fournisseurId: string;
+  fournisseurNom?: string;    
+  total: number;
+  dateAchat: string;
+  createdAt?: string;
+  lignes?: AchatLigne[];
+}
+
+// Payload d'entrée (création d'achat)
+export interface AchatPayload {
+  fournisseurId: string;
+  dateAchat?: string;
+  lignes: AchatLigne[];
 }

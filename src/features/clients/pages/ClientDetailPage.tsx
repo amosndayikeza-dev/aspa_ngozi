@@ -1,36 +1,45 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, Phone, Mail, MapPin, Plus, PawPrint, 
+import {
+  ArrowLeft, Phone, Mail, MapPin, Plus, PawPrint,
   Calendar, Edit, Cake, Weight, Eye, Trash2
 } from 'lucide-react';
 import { clientApi } from '../api/clientApi';
-import { animalApi } from '../api/animalApi'; 
+import { animalApi } from '../api/animalApi';
 import type { Client, Animal } from '../types';
 import { Modal } from '@/shared/ui/Modal';
 import { AnimalForm } from '../components/AnimalForm';
 import { ClientForm } from '../components/ClientForm';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
+import { ResultDialog } from '@/shared/ui/ResultDialog';   // ✅ AJOUT 1
 import { toast } from 'sonner';
 
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [client, setClient] = useState<Client | null>(null);
-  const [animaux, setAnimaux] = useState<Animal[]>([]); 
+  const [animaux, setAnimaux] = useState<Animal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [isAnimalModalOpen, setIsAnimalModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
-  
+
   // États de suppression
   const [isDeleteAnimalModalOpen, setIsDeleteAnimalModalOpen] = useState(false);
   const [animalToDelete, setAnimalToDelete] = useState<Animal | null>(null);
   const [isDeletingAnimal, setIsDeletingAnimal] = useState(false);
 
   const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null);
+
+  // ✅ AJOUT 2 — Popup résultat CRUD
+  const [resultDialog, setResultDialog] = useState<{
+    open: boolean;
+    variant: 'success' | 'error';
+    title: string;
+    description?: string;
+  }>({ open: false, variant: 'success', title: '' });
 
   // ✅ Chargement combiné (Client + Animaux)
   useEffect(() => {
@@ -54,10 +63,17 @@ export function ClientDetailPage() {
     fetchData();
   }, [id, navigate]);
 
+  // ✅ Helper — extraction message d'erreur Tauri (string) ou JS Error
+  const extractErrorMessage = (e: any, fallback: string): string => {
+    if (typeof e === 'string') return e;
+    if (e?.message) return e.message;
+    return fallback;
+  };
+
   // --- AJOUT / MODIFICATION D'UN ANIMAL ---
   const handleAddAnimal = async (data: any) => {
     if (!client) return;
-    
+
     try {
       // On s'assure que le client_id est bien envoyé et que le poids est un nombre
       const payload = {
@@ -71,16 +87,41 @@ export function ClientDetailPage() {
         const updated = await animalApi.updateAnimal(selectedAnimal.id, payload);
         setAnimaux(animaux.map(a => a.id === selectedAnimal.id ? updated : a));
         toast.success("Les informations de l'animal ont été mises à jour");
+
+        // ✅ AJOUT 3a — Popup succès modification animal
+        setResultDialog({
+          open: true,
+          variant: 'success',
+          title: 'Animal modifié',
+          description: `Le dossier de "${data.nom}" a été mis à jour.`,
+        });
       } else {
         // Mode Création
         const newAnimal = await animalApi.createAnimal(payload);
         setAnimaux([...animaux, newAnimal]);
         toast.success("Animal ajouté avec succès");
+
+        // ✅ AJOUT 3b — Popup succès création animal
+        setResultDialog({
+          open: true,
+          variant: 'success',
+          title: 'Animal enregistré',
+          description: `Le dossier de "${data.nom}" a été créé pour ${client.nom} ${client.prenom}.`,
+        });
       }
       setIsAnimalModalOpen(false);
       setSelectedAnimal(null);
     } catch (error: any) {
-      toast.error(error.message || "Erreur lors de l'enregistrement de l'animal");
+      const message = extractErrorMessage(error, "Erreur lors de l'enregistrement de l'animal");
+      toast.error(message);
+
+      // ✅ AJOUT 3c — Popup erreur animal
+      setResultDialog({
+        open: true,
+        variant: 'error',
+        title: 'Enregistrement impossible',
+        description: message,
+      });
     }
   };
 
@@ -98,8 +139,25 @@ export function ClientDetailPage() {
       setAnimaux(animaux.filter(a => a.id !== animalToDelete.id));
       toast.success(`Le dossier de ${animalToDelete.nom} a été supprimé`);
       setIsDeleteAnimalModalOpen(false);
+
+      // ✅ AJOUT 3d — Popup succès suppression animal
+      setResultDialog({
+        open: true,
+        variant: 'success',
+        title: 'Animal supprimé',
+        description: `Le dossier de "${animalToDelete.nom}" a été retiré.`,
+      });
     } catch (error: any) {
-      toast.error(error.message || "Erreur lors de la suppression");
+      const message = extractErrorMessage(error, "Erreur lors de la suppression");
+      toast.error(message);
+
+      // ✅ AJOUT 3e — Popup erreur suppression animal
+      setResultDialog({
+        open: true,
+        variant: 'error',
+        title: 'Suppression impossible',
+        description: message,
+      });
     } finally {
       setIsDeletingAnimal(false);
       setAnimalToDelete(null);
@@ -114,8 +172,25 @@ export function ClientDetailPage() {
       setClient(updatedClient);
       setIsClientModalOpen(false);
       toast.success("Profil client mis à jour");
+
+      // ✅ AJOUT 3f — Popup succès modification client
+      setResultDialog({
+        open: true,
+        variant: 'success',
+        title: 'Profil mis à jour',
+        description: `Les informations de "${data.nom} ${data.prenom}" ont été enregistrées.`,
+      });
     } catch (error: any) {
-      toast.error(error.message || "Erreur lors de la mise à jour du client");
+      const message = extractErrorMessage(error, "Erreur lors de la mise à jour du client");
+      toast.error(message);
+
+      // ✅ AJOUT 3g — Popup erreur modification client
+      setResultDialog({
+        open: true,
+        variant: 'error',
+        title: 'Mise à jour impossible',
+        description: message,
+      });
     }
   };
 
@@ -125,8 +200,8 @@ export function ClientDetailPage() {
   };
 
   const handleOpenEditAnimal = (animal: Animal) => {
-    setSelectedAnimal(animal);      
-    setIsAnimalModalOpen(true);     
+    setSelectedAnimal(animal);
+    setIsAnimalModalOpen(true);
   };
 
   const handleOpenViewAnimal = (animal: Animal) => {
@@ -257,11 +332,10 @@ export function ClientDetailPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100/80">
                   {animaux.map((animal) => {
-                    // Gestion de l'âge si la date de naissance est absente
-                    const age = animal.dateNaissance 
-                      ? new Date().getFullYear() - new Date(animal.dateNaissance).getFullYear() 
+                    const age = animal.dateNaissance
+                      ? new Date().getFullYear() - new Date(animal.dateNaissance).getFullYear()
                       : '—';
-                    
+
                     return (
                       <tr key={animal.id} className="hover:bg-slate-50/70 transition-colors duration-150">
                         <td className="px-3.5 py-2">
@@ -350,6 +424,15 @@ export function ClientDetailPage() {
         title="Supprimer cet animal ?"
         description={`Voulez-vous vraiment supprimer le dossier de ${animalToDelete?.nom} ? Cette action est irréversible.`}
         isLoading={isDeletingAnimal}
+      />
+
+      {/* ✅ AJOUT 4 — Popup résultat CRUD */}
+      <ResultDialog
+        isOpen={resultDialog.open}
+        onClose={() => setResultDialog({ ...resultDialog, open: false })}
+        variant={resultDialog.variant}
+        title={resultDialog.title}
+        description={resultDialog.description}
       />
     </div>
   );

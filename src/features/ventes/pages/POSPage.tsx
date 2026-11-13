@@ -9,6 +9,7 @@ import { animalApi } from '@/features/clients/api/animalApi';
 import { venteApi } from '../api/venteApi';
 import { toast } from 'sonner';
 import { Modal } from '@/shared/ui/Modal';
+import { ResultDialog } from '@/shared/ui/ResultDialog';   // ✅ AJOUT 1
 import { CreditCard, Banknote, Smartphone, CheckCircle2, User, PawPrint, Wallet, Calendar } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useAuth } from '@/features/auth';
@@ -20,13 +21,11 @@ export function POSPage() {
   const [modePaiement, setModePaiement] = useState<ModePaiement>('Espèces');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // --- États client & animal ---
   const [clients, setClients] = useState<Client[]>([]);
   const [animaux, setAnimaux] = useState<Animal[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedAnimalId, setSelectedAnimalId] = useState<string>('');
 
-  // --- États crédit ---
   const [montantVerse, setMontantVerse] = useState<number>(0);
   const [modeVersement, setModeVersement] = useState<string>('Espèces');
   const [dateEcheance, setDateEcheance] = useState<string>(() => {
@@ -35,24 +34,27 @@ export function POSPage() {
     return d.toISOString().split('T')[0];
   });
 
-  // --- Charger les clients au démarrage ---
+  // ✅ AJOUT 2 — Popup résultat vente
+  const [resultDialog, setResultDialog] = useState<{
+    open: boolean;
+    variant: 'success' | 'error';
+    title: string;
+    description?: string;
+  }>({ open: false, variant: 'success', title: '' });
+
   useEffect(() => {
     clientApi.getClients().then(setClients).catch(console.error);
   }, []);
 
-  // --- Charger les animaux quand un client est sélectionné ---
   useEffect(() => {
     if (selectedClientId) {
-      animalApi.getAnimauxByClient(selectedClientId)
-        .then(setAnimaux)
-        .catch(console.error);
+      animalApi.getAnimauxByClient(selectedClientId).then(setAnimaux).catch(console.error);
       setSelectedAnimalId('');
     } else {
       setAnimaux([]);
     }
   }, [selectedClientId]);
 
-  // --- Reset les champs de crédit quand on ferme la modale ---
   useEffect(() => {
     if (!isPaymentModalOpen) {
       setMontantVerse(0);
@@ -61,34 +63,88 @@ export function POSPage() {
     }
   }, [isPaymentModalOpen]);
 
-  // --- LOGIQUE DU PANIER ---
+  // --- LOGIQUE PANIER avec validation stock ---
   const handleAddToCart = (med: Medicament) => {
+    const stock = med.stock ?? 0;
+
+    if (stock <= 0) {
+      toast.error("Stock épuisé", {
+        description: `${med.nom} n'a plus d'unité disponible.`,
+        duration: 5000,
+      });
+      return;
+    }
+
+    const existing = panier.find(l => l.medicament.id === med.id);
+    const currentQte = existing ? existing.quantite : 0;
+
+    if (currentQte + 1 > stock) {
+      toast.error("Stock insuffisant", {
+        description: `Seulement ${stock} unité(s) de "${med.nom}" en stock.`,
+        duration: 5000,
+      });
+      return;
+    }
+
     setPanier((prev) => {
-      const existing = prev.find(l => l.medicament.id === med.id);
-      if (existing) {
-        return prev.map(l => l.medicament.id === med.id ? { ...l, quantite: l.quantite + 1 } : l);
+      const found = prev.find(l => l.medicament.id === med.id);
+      if (found) {
+        return prev.map(l =>
+          l.medicament.id === med.id ? { ...l, quantite: l.quantite + 1 } : l
+        );
       }
       return [...prev, { medicament: med, quantite: 1 }];
     });
   };
 
   const handleUpdateQuantite = (medId: string, delta: number) => {
-    setPanier((prev) => {
-      return prev.map(l => {
-        if (l.medicament.id === medId) {
-          const newQte = l.quantite + delta;
-          return newQte > 0 ? { ...l, quantite: newQte } : l;
-        }
-        return l;
+    const ligne = panier.find(l => l.medicament.id === medId);
+    if (!ligne) return;
+
+    const stock = ligne.medicament.stock ?? 0;
+    const newQte = ligne.quantite + delta;
+
+    if (newQte <= 0) return;
+
+    if (delta > 0 && newQte > stock) {
+      toast.error("Stock insuffisant", {
+        description: `Maximum ${stock} unité(s) disponible(s).`,
+        duration: 4000,
       });
-    });
+      return;
+    }
+
+    setPanier((prev) =>
+      prev.map(l => l.medicament.id === medId ? { ...l, quantite: newQte } : l)
+    );
+  };
+
+  const handleSetQuantite = (medId: string, newQte: number) => {
+    const ligne = panier.find(l => l.medicament.id === medId);
+    if (!ligne) return;
+
+    const stock = ligne.medicament.stock ?? 0;
+
+    let qte = Math.floor(newQte);
+    if (isNaN(qte) || qte < 1) qte = 1;
+
+    if (qte > stock) {
+      toast.error("Stock insuffisant", {
+        description: `Seulement ${stock} unité(s) de "${ligne.medicament.nom}" disponible(s).`,
+        duration: 5000,
+      });
+      qte = stock;
+    }
+
+    setPanier(prev =>
+      prev.map(l => l.medicament.id === medId ? { ...l, quantite: qte } : l)
+    );
   };
 
   const handleRemove = (medId: string) => {
     setPanier((prev) => prev.filter(l => l.medicament.id !== medId));
   };
 
-  // --- VALIDATION ---
   const total = panier.reduce((acc, ligne) => acc + (ligne.medicament.prixVente * ligne.quantite), 0);
   const resteACredit = Math.max(0, total - montantVerse);
 
@@ -102,7 +158,25 @@ export function POSPage() {
       return;
     }
 
-    // Validations spécifiques au crédit
+    // Pré-validation stock
+    for (const ligne of panier) {
+      const stock = ligne.medicament.stock ?? 0;
+      if (ligne.quantite > stock) {
+        toast.error("Stock insuffisant", {
+          description: `"${ligne.medicament.nom}" : demandé ${ligne.quantite}, disponible ${stock}.`,
+          duration: 6000,
+        });
+        // ✅ AJOUT 3a — Popup erreur (blocage au moment de valider)
+        setResultDialog({
+          open: true,
+          variant: 'error',
+          title: 'Vente impossible',
+          description: `Stock insuffisant pour "${ligne.medicament.nom}" : demandé ${ligne.quantite}, disponible ${stock}.`,
+        });
+        return;
+      }
+    }
+
     if (modePaiement === 'Crédit') {
       if (montantVerse < 0 || montantVerse > total) {
         toast.error("Le montant versé est invalide.");
@@ -126,7 +200,6 @@ export function POSPage() {
           quantite: l.quantite,
           prixUnitaire: l.medicament.prixVente,
         })),
-        // ✅ Envoi des infos de crédit (null si vente comptant)
         credit: modePaiement === 'Crédit' ? {
           montantVerse,
           modeVersement,
@@ -139,12 +212,38 @@ export function POSPage() {
         : `Vente de ${total.toLocaleString('fr-FR')} FBU encaissée en ${modePaiement} !`;
 
       toast.success(message);
+
+      // ✅ AJOUT 3b — Popup succès
+      setResultDialog({
+        open: true,
+        variant: 'success',
+        title: 'Vente enregistrée',
+        description: modePaiement === 'Crédit'
+          ? `Vente à crédit de ${total.toLocaleString('fr-FR')} FBU enregistrée. Reste à payer : ${resteACredit.toLocaleString('fr-FR')} FBU.`
+          : `Vente de ${total.toLocaleString('fr-FR')} FBU encaissée en ${modePaiement}.`,
+      });
+
       setPanier([]);
       setIsPaymentModalOpen(false);
       setSelectedClientId('');
       setSelectedAnimalId('');
     } catch (error: any) {
-      toast.error(error.message || "Erreur lors de la validation de la vente");
+      const message = typeof error === 'string'
+        ? error
+        : (error?.message ?? "Erreur lors de la validation de la vente");
+
+      toast.error("Vente impossible", {
+        description: message,
+        duration: 7000,
+      });
+
+      // ✅ AJOUT 3c — Popup erreur (échec backend, ex: stock insuffisant, FK)
+      setResultDialog({
+        open: true,
+        variant: 'error',
+        title: 'Vente impossible',
+        description: message,
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -153,22 +252,20 @@ export function POSPage() {
   return (
     <div className="h-[calc(100vh-5.5rem)] max-w-[1600px] mx-auto select-none print:h-auto print:max-w-full">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 h-full print:block print:h-auto">
-        
         <div className="lg:col-span-7 h-full overflow-hidden print:hidden">
           <CatalogueProduits onAddToCart={handleAddToCart} />
         </div>
-
         <div className="lg:col-span-5 h-full overflow-hidden print:w-full print:h-auto print:overflow-visible">
-          <Panier 
-            lignes={panier} 
+          <Panier
+            lignes={panier}
             onUpdateQuantite={handleUpdateQuantite}
+            onSetQuantite={handleSetQuantite}
             onRemove={handleRemove}
             onCheckout={() => setIsPaymentModalOpen(true)}
           />
         </div>
       </div>
 
-      {/* MODALE DE PAIEMENT */}
       <div className="print:hidden">
         <Modal
           isOpen={isPaymentModalOpen}
@@ -179,8 +276,6 @@ export function POSPage() {
           variant="dialog"
         >
           <div className="space-y-3.5 select-none">
-            
-            {/* SÉLECTION DU CLIENT ET DE L'ANIMAL */}
             <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
@@ -217,7 +312,6 @@ export function POSPage() {
               )}
             </div>
 
-            {/* MONTANT TOTAL */}
             <div className="bg-emerald-50/70 p-3 rounded-xl text-center border border-emerald-200/70 shadow-2xs">
               <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-0.5">
                 Montant Net à Encaisser
@@ -227,7 +321,6 @@ export function POSPage() {
               </p>
             </div>
 
-            {/* MODE DE PAIEMENT */}
             <div className="space-y-1.5">
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mode de règlement</p>
               <div className="space-y-1.5">
@@ -242,8 +335,8 @@ export function POSPage() {
                     onClick={() => setModePaiement(mode.id as ModePaiement)}
                     className={cn(
                       "w-full flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer text-left",
-                      modePaiement === mode.id 
-                        ? "bg-slate-950 border-slate-950 text-white shadow-md" 
+                      modePaiement === mode.id
+                        ? "bg-slate-950 border-slate-950 text-white shadow-md"
                         : "bg-white border-slate-200/90 text-slate-800 hover:bg-slate-50"
                     )}
                   >
@@ -255,7 +348,6 @@ export function POSPage() {
               </div>
             </div>
 
-            {/* CHAMPS CRÉDIT (uniquement si mode Crédit) */}
             {modePaiement === 'Crédit' && (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2.5">
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-800 uppercase tracking-wider">
@@ -263,7 +355,6 @@ export function POSPage() {
                   Détails du crédit
                 </div>
 
-                {/* Montant versé */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-semibold text-amber-700">Montant versé maintenant (FBU)</label>
                   <input
@@ -295,7 +386,6 @@ export function POSPage() {
                   </div>
                 </div>
 
-                {/* Mode du versement */}
                 {montantVerse > 0 && (
                   <div className="space-y-1">
                     <label className="text-[10px] font-semibold text-amber-700">Mode de paiement de l'acompte</label>
@@ -311,7 +401,6 @@ export function POSPage() {
                   </div>
                 )}
 
-                {/* Date d'échéance */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-semibold text-amber-700">Date d'échéance</label>
                   <input
@@ -322,7 +411,6 @@ export function POSPage() {
                   />
                 </div>
 
-                {/* Récap reste à crédit */}
                 <div className="pt-2 border-t border-amber-200 flex justify-between items-center">
                   <span className="text-[10px] font-semibold text-amber-700">Reste à crédit :</span>
                   <span className="text-sm font-bold text-amber-900 font-mono">
@@ -332,15 +420,14 @@ export function POSPage() {
               </div>
             )}
 
-            {/* BOUTONS */}
             <div className="pt-2 border-t border-slate-100 flex gap-2">
-              <button 
+              <button
                 onClick={() => setIsPaymentModalOpen(false)}
                 className="flex-1 h-8 bg-slate-100 hover:bg-slate-200/60 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
               >
                 Annuler
               </button>
-              <button 
+              <button
                 onClick={handleConfirmPayment}
                 disabled={isProcessing || !selectedClientId}
                 className="flex-1 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-all shadow-2xs border border-emerald-600 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
@@ -352,6 +439,14 @@ export function POSPage() {
         </Modal>
       </div>
 
+      {/* ✅ AJOUT 4 — Popup résultat vente */}
+      <ResultDialog
+        isOpen={resultDialog.open}
+        onClose={() => setResultDialog({ ...resultDialog, open: false })}
+        variant={resultDialog.variant}
+        title={resultDialog.title}
+        description={resultDialog.description}
+      />
     </div>
   );
 }

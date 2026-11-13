@@ -1,5 +1,5 @@
-// src/features/notifications/components/NotificationPanel.tsx
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom'; 
 import { useNavigate } from 'react-router-dom';
 import { X, AlertTriangle, Package, Info, CheckCircle2, CheckCheck, ArrowRight } from 'lucide-react';
 import { notificationApi } from '../api/notificationApi';
@@ -44,23 +44,26 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  return (
+  // On prépare le contenu du panneau
+  const panelContent = (
     <>
+      {/* Overlay sombre (Z-index très élevé) */}
       <div 
         className={cn(
-          "fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40 transition-opacity duration-300 print:hidden", 
+          "fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] transition-opacity duration-300 print:hidden", 
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
       />
 
+      {/* Panneau latéral (Z-index encore plus élevé) */}
       <div className={cn(
-        "fixed top-0 right-0 h-full w-full max-w-[380px] bg-slate-50 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col print:hidden",
+        "fixed top-0 right-0 h-[100dvh] w-full max-w-[380px] bg-slate-50 shadow-2xl z-[110] transform transition-transform duration-300 ease-in-out flex flex-col print:hidden",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}>
         
         {/* --- EN-TÊTE --- */}
-        <div className="p-3.5 border-b border-slate-200/80 flex justify-between items-center bg-white shrink-0">
+        <div className="p-4 border-b border-slate-200/80 flex justify-between items-center bg-white shrink-0">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-slate-900">Notifications</h2>
             {unreadCount > 0 && (
@@ -78,7 +81,7 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
         </div>
 
         {/* --- LISTE --- */}
-        <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {notifications.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400">
               <CheckCircle2 className="w-8 h-8 mb-2 text-slate-300" />
@@ -101,17 +104,14 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                       : "bg-white border-slate-200 shadow-sm hover:border-emerald-300 hover:shadow-md"
                   )}
                 >
-                  {/* Indicateur de lecture (barre fine) */}
                   {!notif.isRead && (
                     <div className={cn("absolute left-0 top-3 bottom-3 w-1 rounded-r-full", config.iconColor.replace('text-', 'bg-'))} />
                   )}
 
-                  {/* Icône */}
                   <div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5", config.bgColor)}>
                     <Icon className={cn("w-3.5 h-3.5", config.iconColor)} />
                   </div>
 
-                  {/* Texte */}
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-0.5">
                       <p className={cn("text-xs font-bold truncate pr-2", notif.isRead ? "text-slate-600" : "text-slate-900")}>
@@ -145,7 +145,7 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
             <button 
               onClick={handleMarkAllAsRead}
               disabled={unreadCount === 0}
-              className="w-full h-8 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-8 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
             >
               <CheckCheck className="w-3.5 h-3.5" />
               Tout marquer comme lu
@@ -160,8 +160,13 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
             </button>
           </div>
         )}
-
       </div>
     </>
   );
+
+  // 2. ON RETOURNE LE PORTAIL
+  // Si isOpen est false, on ne rend rien (le portail n'est pas créé)
+  if (!isOpen) return null;
+  
+  return createPortal(panelContent, document.body);
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   BarChart3, Download, TrendingUp, TrendingDown, 
-  Wallet, PieChart, Users, Loader2 // <-- Ajout de Loader2
+  Wallet, PieChart, Users, Loader2 
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
